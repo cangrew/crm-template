@@ -6,7 +6,7 @@ function setup(props: Partial<React.ComponentProps<typeof FormModal>> = {}) {
   const onSubmit = vi.fn();
   const onClose = vi.fn();
   render(
-    <FormModal open onClose={onClose} title="New driver" onSubmit={onSubmit} {...props}>
+    <FormModal open onClose={onClose} title="New contact" onSubmit={onSubmit} {...props}>
       <input aria-label="Name" />
     </FormModal>,
   );
@@ -16,7 +16,7 @@ function setup(props: Partial<React.ComponentProps<typeof FormModal>> = {}) {
 describe("FormModal", () => {
   it("renders the title and form body", () => {
     setup();
-    expect(screen.getByRole("heading", { name: "New driver" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "New contact" })).toBeInTheDocument();
     expect(screen.getByLabelText("Name")).toBeInTheDocument();
   });
 

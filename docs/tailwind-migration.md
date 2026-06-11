@@ -1,13 +1,11 @@
-# Tailwind migration playbook
+# Tailwind styling playbook
 
 This repo ships **Tailwind CSS v4** (`@import "tailwindcss"` in
-`app/globals.css`), but most styling historically lived in a large
-hand-rolled `globals.css` of custom classes plus inline `style={{}}`
-blocks. This playbook captures the pattern used to migrate the **Loads**
-feature (the reference PR) so the rest of the app can follow.
-
-Goal: behavior- and pixel-preserving conversion. This is a refactor, not
-a redesign — keep exact pixel values via arbitrary utilities.
+`app/globals.css`). All component styling uses token-backed utilities;
+`globals.css` holds only the design tokens, a few single-property helper
+classes, and the shell/menu vocabulary. This playbook documents those
+conventions so new features (and per-company restyles) stay consistent:
+no new inline `style={{}}` and no new `globals.css` rules.
 
 ## 1. Token bridge (already done, app-wide)
 
@@ -127,30 +125,16 @@ build`, and confirm any new token utilities appear in the built CSS
    (`grep` the file in `.next/static/chunks/*.css`).
 6. **Commit** with `refactor:` (behavior-preserving).
 
-## 5. Rollout checklist (remaining surfaces)
+## 5. Current state
 
-Each is a focused follow-up PR off `main`:
-
-- [x] `app/(app)/page.tsx` (dashboard layout classes + skeletons)
-- [x] `app/(app)/drivers/page.tsx`, `drivers/[id]/page.tsx`
-- [x] `app/(app)/dispatchers/page.tsx`, `dispatchers/[id]/page.tsx`
-- [x] `app/(app)/payments/page.tsx`, `payments/[id]/page.tsx`
-- [x] `app/(app)/costs/page.tsx`, `documents/page.tsx`, `timeclock/page.tsx`
-- [x] `app/(app)/reports/page.tsx`, `account/page.tsx`, `settings/users/page.tsx`
-- [x] `app/(auth)/login/page.tsx`
-- [x] `app/(app)/payroll/page.tsx`, `payroll/[id]/page.tsx` (not originally listed
-      but swept for completeness)
-- [x] `components/shell/*` (sidebar, topbar, profile-menu, command-palette, notifications)
-- [x] App-wide inline-`style` + self-contained layout-class sweep (feature
-      components, `components/ui/*`, dashboard cards). All static `style={{}}`
-      converted; only genuinely dynamic values remain (tone/color maps,
-      percentage widths/heights, dynamic `gridTemplateColumns`, prop-driven
-      `width`/`size`, dynamic `g-${n}` grids, SVG presentation attributes).
-- [x] Primitive componentization (§3): `Card`/`CardHead`/`CardBody`,
-      `Input`/`Select`/`Textarea`, `Table`, `Segmented`, `Badge` (+ `Btn`,
-      `FormField`, `EntityTable`) are now components and their `globals.css`
-      base rules are deleted. Remaining `globals.css` classes are the
-      single-property tokens kept by design (`.muted`, `.cell-num`, `.spacer`,
-      `.mono`/`.strong`, `.kv`, the grid `.g-*` helpers used by the dynamic
-      dashboard grid) and shell/menu vocabulary (`.side*`, `.top*`, `.menu*`,
-      `.cmdk*`, `.ntf*`, `.badge-pick*`, `.filterbar`, `.fld`, `.kpi*`, etc.).
+The conversion is complete across the template. All static `style={{}}`
+is gone; only genuinely dynamic values remain inline (tone/color maps,
+percentage widths/heights, prop-driven `width`/`size`, dynamic `g-${n}`
+grids, SVG presentation attributes). The primitives (`Card`, `Input`/
+`Select`/`Textarea`, `Table`, `Segmented`, `Badge`, `Btn`, `FormField`,
+`EntityTable`) own their base styling as components. Remaining
+`globals.css` classes are the single-property tokens kept by design
+(`.muted`, `.cell-num`, `.spacer`, `.mono`/`.strong`, `.kv`, the grid
+`.g-*` helpers) and shell/menu vocabulary (`.side*`, `.top*`, `.menu*`,
+`.cmdk*`, `.ntf*`, `.badge-pick*`, `.filterbar`, `.fld`, `.kpi*`, etc.).
+Keep it that way: style new features with utilities per §2/§3.
