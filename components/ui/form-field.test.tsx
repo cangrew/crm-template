@@ -5,11 +5,11 @@ import { FormField } from "./form-field";
 describe("FormField", () => {
   it("associates the label with its control", () => {
     render(
-      <FormField label="Broker name">
+      <FormField label="Company name">
         <input />
       </FormField>,
     );
-    expect(screen.getByLabelText("Broker name")).toBeInTheDocument();
+    expect(screen.getByLabelText("Company name")).toBeInTheDocument();
   });
 
   it("marks required fields", () => {
