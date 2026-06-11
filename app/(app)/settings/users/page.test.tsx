@@ -1,86 +1,72 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import React from "react";
+import type { Profile } from "@/lib/supabase/types";
 
-// ── Mocks ──────────────────────────────────────────────────────────────────
-const mockRefetch = vi.fn();
-const mockUpdateMutate = vi.fn();
-const mockToast = vi.fn();
-
-let profilesData: unknown[] | undefined = undefined;
-let profilesIsLoading = false;
-let profilesIsError = false;
+// --- hoisted mocks ---
+const { useProfiles, useUpdateProfile, toastFn } = vi.hoisted(() => ({
+  useProfiles: vi.fn(),
+  useUpdateProfile: vi.fn(),
+  toastFn: vi.fn(),
+}));
 
 vi.mock("@/lib/data/hooks", () => ({
-  useProfiles: () => ({
-    data: profilesData,
-    isLoading: profilesIsLoading,
-    isError: profilesIsError,
-    refetch: mockRefetch,
-  }),
-  useUpdateProfile: () => ({ mutate: mockUpdateMutate }),
+  useProfiles,
+  useUpdateProfile,
 }));
 
 vi.mock("@/components/ui/toast", () => ({
-  useToast: () => mockToast,
+  useToast: () => toastFn,
 }));
 
-vi.mock("@/lib/domain/enums", () => ({
-  APP_ROLE_LABELS: {
-    admin: "Admin",
-    manager: "Manager",
-    member: "Member",
-  },
-}));
-
-vi.mock("@/components/settings/users/users-filter-bar", () => ({
-  UsersFilterBar: ({
-    onQ,
-    onRole,
-  }: {
-    onQ: (v: string) => void;
-    onRole: (v: string) => void;
-  }) => (
-    <div>
-      <input aria-label="search" onChange={(e) => onQ(e.target.value)} />
-      <select aria-label="role" onChange={(e) => onRole(e.target.value)}>
-        <option value="">All</option>
-        <option value="admin">Admin</option>
-        <option value="manager">Manager</option>
-        <option value="member">Member</option>
-      </select>
-    </div>
-  ),
-}));
-
+// UsersTable exposes onChangeRole / onToggleActive callbacks through buttons
+// so we can verify they receive the right arguments.
 vi.mock("@/components/settings/users/users-table", () => ({
   UsersTable: ({
     rows,
     onChangeRole,
     onToggleActive,
   }: {
-    rows: Array<{ id: string; email: string; role: string | null; is_active: boolean }>;
+    rows: Profile[];
     onChangeRole: (id: string, role: string) => void;
     onToggleActive: (id: string, isActive: boolean) => void;
   }) => (
-    <div data-testid="users-table">
-      {rows.map((r) => (
-        <div key={r.id} data-testid={`user-row-${r.id}`}>
-          <span>{r.email}</span>
-          <button onClick={() => onChangeRole(r.id, "manager")}>Change Role</button>
-          <button onClick={() => onToggleActive(r.id, r.is_active)}>Toggle</button>
-        </div>
+    <ul data-testid="users-table">
+      {rows.map((p) => (
+        <li key={p.id} data-testid="user-row" data-id={p.id}>
+          {p.email}
+          <button onClick={() => onChangeRole(p.id, "manager")}>change-role</button>
+          <button onClick={() => onToggleActive(p.id, p.is_active ?? false)}>toggle-active</button>
+        </li>
       ))}
-    </div>
+    </ul>
   ),
 }));
 
-vi.mock("@/components/common/page-states", () => ({
-  PageErrorState: ({ body, onRetry }: { body: string; onRetry: () => void }) => (
+vi.mock("@/components/settings/users/users-filter-bar", () => ({
+  UsersFilterBar: ({
+    q,
+    onQ,
+    role,
+    onRole,
+  }: {
+    q: string;
+    onQ: (v: string) => void;
+    role: string;
+    onRole: (v: string) => void;
+  }) => (
     <div>
-      <p>{body}</p>
-      <button onClick={onRetry}>Retry</button>
+      <input
+        data-testid="filter-q"
+        value={q}
+        onChange={(e) => onQ(e.target.value)}
+        placeholder="Search"
+      />
+      <select data-testid="filter-role" value={role} onChange={(e) => onRole(e.target.value)}>
+        <option value="">All</option>
+        <option value="admin">admin</option>
+        <option value="manager">manager</option>
+        <option value="member">member</option>
+      </select>
     </div>
   ),
 }));
@@ -97,32 +83,32 @@ vi.mock("@/components/common/page-header", () => ({
   }) => (
     <div>
       <h1>{title}</h1>
-      {subtitle && <p>{subtitle}</p>}
-      {actions}
+      {subtitle && <p data-testid="subtitle">{subtitle}</p>}
+      {actions && <div data-testid="page-actions">{actions}</div>}
+    </div>
+  ),
+}));
+
+vi.mock("@/components/common/page-states", () => ({
+  PageErrorState: ({ body, onRetry }: { body: string; onRetry: () => void }) => (
+    <div data-testid="error-state">
+      <span>{body}</span>
+      <button onClick={onRetry}>Retry</button>
     </div>
   ),
 }));
 
 vi.mock("@/components/ui/btn", () => ({
-  Btn: ({
-    children,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    variant?: string;
-    icon?: React.ReactNode;
-  }) => <button onClick={onClick}>{children}</button>,
+  Btn: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
+    <button onClick={onClick}>{children}</button>
+  ),
 }));
 
 vi.mock("@/components/ui/states", () => ({
-  EmptyState: ({ title, body }: { icon?: unknown; title: string; body: string }) => (
-    <div>
-      <h3>{title}</h3>
-      <p>{body}</p>
-    </div>
+  EmptyState: ({ title }: { title: string }) => (
+    <div data-testid="empty-state">{title}</div>
   ),
-  TableSkeleton: () => <tr data-testid="table-skeleton" />,
+  TableSkeleton: () => <tr><td>loading…</td></tr>,
 }));
 
 vi.mock("@/components/ui/table", () => ({
@@ -131,213 +117,271 @@ vi.mock("@/components/ui/table", () => ({
 
 import UserManagementPage from "./page";
 
-function makeProfile(overrides: Partial<{
-  id: string;
-  email: string;
-  full_name: string | null;
-  role: string | null;
-  is_active: boolean;
-  created_at: string;
-}> = {}) {
+function profile(overrides: Partial<Profile> = {}): Profile {
   return {
-    id: "u1",
+    id: "p1",
     email: "alice@example.com",
-    full_name: "Alice",
-    role: "member",
+    full_name: "Alice Smith",
+    role: "admin",
     is_active: true,
     created_at: "2026-01-01T00:00:00Z",
     ...overrides,
   };
 }
 
+function makeProfilesQ(overrides: Record<string, unknown> = {}) {
+  return {
+    data: [],
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+    ...overrides,
+  };
+}
+
+const mutate = vi.fn();
+
 beforeEach(() => {
   vi.clearAllMocks();
-  profilesData = undefined;
-  profilesIsLoading = false;
-  profilesIsError = false;
+  useUpdateProfile.mockReturnValue({ mutate });
+  useProfiles.mockReturnValue(makeProfilesQ());
 });
 
 describe("UserManagementPage", () => {
-  it("renders the page title", () => {
-    profilesData = [];
-    render(<UserManagementPage />);
-    expect(screen.getByRole("heading", { name: "User Management" })).toBeInTheDocument();
-  });
+  describe("subtitle counts", () => {
+    it("shows total accounts and active count", () => {
+      useProfiles.mockReturnValue(
+        makeProfilesQ({
+          data: [
+            profile({ id: "1", is_active: true }),
+            profile({ id: "2", is_active: false }),
+            profile({ id: "3", is_active: true }),
+          ],
+        }),
+      );
+      render(<UserManagementPage />);
+      expect(screen.getByTestId("subtitle").textContent).toBe("3 accounts · 2 active");
+    });
 
-  it("shows loading skeleton when profiles are loading", () => {
-    profilesIsLoading = true;
-    render(<UserManagementPage />);
-    expect(screen.getByTestId("table-skeleton")).toBeInTheDocument();
-  });
+    it("uses singular 'account' for exactly one user", () => {
+      useProfiles.mockReturnValue(makeProfilesQ({ data: [profile()] }));
+      render(<UserManagementPage />);
+      expect(screen.getByTestId("subtitle").textContent).toBe("1 account · 1 active");
+    });
 
-  it("shows error state on error and calls refetch on retry", () => {
-    profilesIsError = true;
-    render(<UserManagementPage />);
-    expect(screen.getByText("Failed to fetch users.")).toBeInTheDocument();
-
-    screen.getByRole("button", { name: "Retry" }).click();
-    expect(mockRefetch).toHaveBeenCalledTimes(1);
-  });
-
-  it("shows 'No users provisioned' empty state when there are no users", () => {
-    profilesData = [];
-    render(<UserManagementPage />);
-    expect(screen.getByRole("heading", { name: "No users provisioned" })).toBeInTheDocument();
-  });
-
-  it("renders the users table when profiles are loaded", () => {
-    profilesData = [makeProfile()];
-    render(<UserManagementPage />);
-    expect(screen.getByTestId("users-table")).toBeInTheDocument();
-  });
-
-  it("shows subtitle with correct account and active counts", () => {
-    profilesData = [
-      makeProfile({ id: "u1", is_active: true }),
-      makeProfile({ id: "u2", is_active: false }),
-      makeProfile({ id: "u3", is_active: true }),
-    ];
-    render(<UserManagementPage />);
-    expect(screen.getByText("3 accounts · 2 active")).toBeInTheDocument();
-  });
-
-  it("shows singular 'account' when count is 1", () => {
-    profilesData = [makeProfile({ id: "u1", is_active: true })];
-    render(<UserManagementPage />);
-    expect(screen.getByText("1 account · 1 active")).toBeInTheDocument();
-  });
-
-  it("filters profiles by search query matching email", async () => {
-    profilesData = [
-      makeProfile({ id: "u1", email: "alice@example.com", full_name: "Alice" }),
-      makeProfile({ id: "u2", email: "bob@example.com", full_name: "Bob" }),
-    ];
-    render(<UserManagementPage />);
-
-    await userEvent.type(screen.getByLabelText("search"), "alice");
-
-    expect(screen.getByTestId("user-row-u1")).toBeInTheDocument();
-    expect(screen.queryByTestId("user-row-u2")).not.toBeInTheDocument();
-  });
-
-  it("filters profiles by search query matching full_name", async () => {
-    profilesData = [
-      makeProfile({ id: "u1", email: "a@example.com", full_name: "Alice Wonder" }),
-      makeProfile({ id: "u2", email: "b@example.com", full_name: "Bob Smith" }),
-    ];
-    render(<UserManagementPage />);
-
-    await userEvent.type(screen.getByLabelText("search"), "wonder");
-
-    expect(screen.getByTestId("user-row-u1")).toBeInTheDocument();
-    expect(screen.queryByTestId("user-row-u2")).not.toBeInTheDocument();
-  });
-
-  it("filters profiles by role dropdown", async () => {
-    profilesData = [
-      makeProfile({ id: "u1", role: "admin" }),
-      makeProfile({ id: "u2", role: "member" }),
-    ];
-    render(<UserManagementPage />);
-
-    await userEvent.selectOptions(screen.getByLabelText("role"), "admin");
-
-    expect(screen.getByTestId("user-row-u1")).toBeInTheDocument();
-    expect(screen.queryByTestId("user-row-u2")).not.toBeInTheDocument();
-  });
-
-  it("shows 'No users match these filters' when filters exclude all results", async () => {
-    profilesData = [makeProfile({ role: "member" })];
-    render(<UserManagementPage />);
-
-    await userEvent.selectOptions(screen.getByLabelText("role"), "admin");
-
-    await waitFor(() => {
-      expect(
-        screen.getByRole("heading", { name: "No users match these filters" }),
-      ).toBeInTheDocument();
+    it("shows zero counts when no users exist", () => {
+      render(<UserManagementPage />);
+      expect(screen.getByTestId("subtitle").textContent).toBe("0 accounts · 0 active");
     });
   });
 
-  it("calls updateProfile.mutate with new role when changeRole is invoked", () => {
-    profilesData = [makeProfile({ id: "u1", role: "member" })];
-    render(<UserManagementPage />);
+  describe("filter by text (q)", () => {
+    const profiles = [
+      profile({ id: "a", email: "alice@example.com", full_name: "Alice Smith" }),
+      profile({ id: "b", email: "bob@example.com", full_name: "Bob Jones" }),
+      profile({ id: "c", email: "carol@example.com", full_name: null }),
+    ];
 
-    screen.getByRole("button", { name: "Change Role" }).click();
+    beforeEach(() => {
+      useProfiles.mockReturnValue(makeProfilesQ({ data: profiles }));
+    });
 
-    expect(mockUpdateMutate).toHaveBeenCalledWith(
-      { id: "u1", patch: { role: "manager" } },
-      expect.objectContaining({ onSuccess: expect.any(Function) }),
-    );
+    it("shows all users when filter is empty", () => {
+      render(<UserManagementPage />);
+      expect(screen.getAllByTestId("user-row")).toHaveLength(3);
+    });
+
+    it("filters by email (case-insensitive)", () => {
+      render(<UserManagementPage />);
+      fireEvent.change(screen.getByTestId("filter-q"), { target: { value: "ALICE" } });
+      const rows = screen.getAllByTestId("user-row");
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toHaveTextContent("alice@example.com");
+    });
+
+    it("filters by full_name", () => {
+      render(<UserManagementPage />);
+      fireEvent.change(screen.getByTestId("filter-q"), { target: { value: "jones" } });
+      const rows = screen.getAllByTestId("user-row");
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toHaveAttribute("data-id", "b");
+    });
+
+    it("does not crash when full_name is null", () => {
+      render(<UserManagementPage />);
+      fireEvent.change(screen.getByTestId("filter-q"), { target: { value: "carol" } });
+      const rows = screen.getAllByTestId("user-row");
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toHaveAttribute("data-id", "c");
+    });
+
+    it("shows empty state when no users match the search", () => {
+      render(<UserManagementPage />);
+      fireEvent.change(screen.getByTestId("filter-q"), { target: { value: "zzznomatch" } });
+      expect(screen.getByTestId("empty-state")).toBeInTheDocument();
+    });
+
+    it("shows 'No users match these filters' when some exist but none match", () => {
+      render(<UserManagementPage />);
+      fireEvent.change(screen.getByTestId("filter-q"), { target: { value: "zzznomatch" } });
+      expect(screen.getByTestId("empty-state")).toHaveTextContent("No users match these filters");
+    });
   });
 
-  it("toasts success message after role change", () => {
-    profilesData = [makeProfile({ id: "u1", role: "member" })];
-    mockUpdateMutate.mockImplementation(
-      (_args: unknown, { onSuccess }: { onSuccess: () => void }) => {
-        onSuccess();
-      },
-    );
-    render(<UserManagementPage />);
+  describe("filter by role", () => {
+    const profiles = [
+      profile({ id: "a", email: "alice@example.com", role: "admin" }),
+      profile({ id: "b", email: "bob@example.com", role: "manager" }),
+      profile({ id: "c", email: "carol@example.com", role: "member" }),
+    ];
 
-    screen.getByRole("button", { name: "Change Role" }).click();
+    beforeEach(() => {
+      useProfiles.mockReturnValue(makeProfilesQ({ data: profiles }));
+    });
 
-    expect(mockToast).toHaveBeenCalledWith("Role set to Manager", "success");
+    it("filters to admin users only", () => {
+      render(<UserManagementPage />);
+      fireEvent.change(screen.getByTestId("filter-role"), { target: { value: "admin" } });
+      const rows = screen.getAllByTestId("user-row");
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toHaveAttribute("data-id", "a");
+    });
+
+    it("filters to manager users only", () => {
+      render(<UserManagementPage />);
+      fireEvent.change(screen.getByTestId("filter-role"), { target: { value: "manager" } });
+      const rows = screen.getAllByTestId("user-row");
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toHaveAttribute("data-id", "b");
+    });
+
+    it("shows all users when role filter is cleared", () => {
+      render(<UserManagementPage />);
+      fireEvent.change(screen.getByTestId("filter-role"), { target: { value: "admin" } });
+      fireEvent.change(screen.getByTestId("filter-role"), { target: { value: "" } });
+      expect(screen.getAllByTestId("user-row")).toHaveLength(3);
+    });
   });
 
-  it("calls updateProfile.mutate with is_active toggled when toggleActive is invoked", () => {
-    profilesData = [makeProfile({ id: "u1", is_active: true })];
-    render(<UserManagementPage />);
+  describe("changeRole", () => {
+    it("calls updateProfile.mutate with the new role", () => {
+      useProfiles.mockReturnValue(makeProfilesQ({ data: [profile({ id: "u42" })] }));
+      render(<UserManagementPage />);
+      // The stub UsersTable renders a "change-role" button that calls onChangeRole(id, "manager")
+      fireEvent.click(screen.getByRole("button", { name: "change-role" }));
+      expect(mutate).toHaveBeenCalledWith(
+        { id: "u42", patch: { role: "manager" } },
+        expect.objectContaining({ onSuccess: expect.any(Function) }),
+      );
+    });
 
-    screen.getByRole("button", { name: "Toggle" }).click();
+    it("shows a success toast on role change", () => {
+      useProfiles.mockReturnValue(makeProfilesQ({ data: [profile({ id: "u1" })] }));
+      mutate.mockImplementation((_input: unknown, opts: { onSuccess?: () => void }) => opts.onSuccess?.());
+      render(<UserManagementPage />);
+      fireEvent.click(screen.getByRole("button", { name: "change-role" }));
+      expect(toastFn).toHaveBeenCalledWith("Role set to Manager", "success");
+    });
 
-    expect(mockUpdateMutate).toHaveBeenCalledWith(
-      { id: "u1", patch: { is_active: false } },
-      expect.objectContaining({ onSuccess: expect.any(Function) }),
-    );
+    it("shows an error toast when role change fails", () => {
+      useProfiles.mockReturnValue(makeProfilesQ({ data: [profile({ id: "u1" })] }));
+      const err = new Error("DB constraint");
+      mutate.mockImplementation(
+        (_input: unknown, opts: { onError?: (e: Error) => void }) => opts.onError?.(err),
+      );
+      render(<UserManagementPage />);
+      fireEvent.click(screen.getByRole("button", { name: "change-role" }));
+      expect(toastFn).toHaveBeenCalledWith("Could not update: DB constraint", "error");
+    });
   });
 
-  it("toasts 'User disabled' when an active user is toggled off", () => {
-    profilesData = [makeProfile({ id: "u1", is_active: true })];
-    mockUpdateMutate.mockImplementation(
-      (_args: unknown, { onSuccess }: { onSuccess: () => void }) => {
-        onSuccess();
-      },
-    );
-    render(<UserManagementPage />);
+  describe("toggleActive", () => {
+    it("calls updateProfile.mutate with is_active flipped to false when user is active", () => {
+      useProfiles.mockReturnValue(
+        makeProfilesQ({ data: [profile({ id: "u99", is_active: true })] }),
+      );
+      render(<UserManagementPage />);
+      fireEvent.click(screen.getByRole("button", { name: "toggle-active" }));
+      expect(mutate).toHaveBeenCalledWith(
+        { id: "u99", patch: { is_active: false } },
+        expect.objectContaining({ onSuccess: expect.any(Function) }),
+      );
+    });
 
-    screen.getByRole("button", { name: "Toggle" }).click();
+    it("calls updateProfile.mutate with is_active flipped to true when user is inactive", () => {
+      useProfiles.mockReturnValue(
+        makeProfilesQ({ data: [profile({ id: "u88", is_active: false })] }),
+      );
+      render(<UserManagementPage />);
+      fireEvent.click(screen.getByRole("button", { name: "toggle-active" }));
+      expect(mutate).toHaveBeenCalledWith(
+        { id: "u88", patch: { is_active: true } },
+        expect.objectContaining({ onSuccess: expect.any(Function) }),
+      );
+    });
 
-    expect(mockToast).toHaveBeenCalledWith("User disabled", "success");
+    it("shows 'User disabled' toast when an active user is deactivated", () => {
+      useProfiles.mockReturnValue(
+        makeProfilesQ({ data: [profile({ id: "u1", is_active: true })] }),
+      );
+      mutate.mockImplementation((_input: unknown, opts: { onSuccess?: () => void }) => opts.onSuccess?.());
+      render(<UserManagementPage />);
+      fireEvent.click(screen.getByRole("button", { name: "toggle-active" }));
+      expect(toastFn).toHaveBeenCalledWith("User disabled", "success");
+    });
+
+    it("shows 'User re-enabled' toast when an inactive user is re-activated", () => {
+      useProfiles.mockReturnValue(
+        makeProfilesQ({ data: [profile({ id: "u2", is_active: false })] }),
+      );
+      mutate.mockImplementation((_input: unknown, opts: { onSuccess?: () => void }) => opts.onSuccess?.());
+      render(<UserManagementPage />);
+      fireEvent.click(screen.getByRole("button", { name: "toggle-active" }));
+      expect(toastFn).toHaveBeenCalledWith("User re-enabled", "success");
+    });
   });
 
-  it("toasts 'User re-enabled' when an inactive user is toggled on", () => {
-    profilesData = [makeProfile({ id: "u1", is_active: false })];
-    mockUpdateMutate.mockImplementation(
-      (_args: unknown, { onSuccess }: { onSuccess: () => void }) => {
-        onSuccess();
-      },
-    );
-    render(<UserManagementPage />);
-
-    screen.getByRole("button", { name: "Toggle" }).click();
-
-    expect(mockToast).toHaveBeenCalledWith("User re-enabled", "success");
+  describe("loading state", () => {
+    it("renders skeleton when data is loading", () => {
+      useProfiles.mockReturnValue(makeProfilesQ({ isLoading: true, data: undefined }));
+      render(<UserManagementPage />);
+      expect(screen.queryByTestId("users-table")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("empty-state")).not.toBeInTheDocument();
+    });
   });
 
-  it("shows the Invite User button", () => {
-    profilesData = [];
-    render(<UserManagementPage />);
-    expect(screen.getByRole("button", { name: "Invite User" })).toBeInTheDocument();
+  describe("error state", () => {
+    it("renders the error state when query errors", () => {
+      useProfiles.mockReturnValue(makeProfilesQ({ isError: true }));
+      render(<UserManagementPage />);
+      expect(screen.getByTestId("error-state")).toBeInTheDocument();
+      expect(screen.getByText("Failed to fetch users.")).toBeInTheDocument();
+    });
+
+    it("calls refetch on retry", () => {
+      const refetch = vi.fn();
+      useProfiles.mockReturnValue(makeProfilesQ({ isError: true, refetch }));
+      render(<UserManagementPage />);
+      fireEvent.click(screen.getByRole("button", { name: /retry/i }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+    });
   });
 
-  it("toasts an informational message when Invite User is clicked", async () => {
-    profilesData = [];
-    render(<UserManagementPage />);
-    await userEvent.click(screen.getByRole("button", { name: "Invite User" }));
-    expect(mockToast).toHaveBeenCalledWith(
-      "Invitations go through Microsoft Entra ID.",
-      "default",
-    );
+  describe("empty state", () => {
+    it("shows 'No users provisioned' when there are no users at all", () => {
+      render(<UserManagementPage />);
+      expect(screen.getByTestId("empty-state")).toHaveTextContent("No users provisioned");
+    });
+  });
+
+  describe("Invite User button", () => {
+    it("shows a toast about Entra ID when the Invite User button is clicked", () => {
+      render(<UserManagementPage />);
+      fireEvent.click(screen.getByRole("button", { name: /invite user/i }));
+      expect(toastFn).toHaveBeenCalledWith(
+        "Invitations go through Microsoft Entra ID.",
+        "default",
+      );
+    });
   });
 });

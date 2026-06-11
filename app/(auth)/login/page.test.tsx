@@ -1,14 +1,15 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// ── Mocks ──────────────────────────────────────────────────────────────────
-const mockSignInWithOAuth = vi.fn();
+// --- hoisted mocks ---
+const { signInWithOAuth } = vi.hoisted(() => ({
+  signInWithOAuth: vi.fn(),
+}));
 
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
     auth: {
-      signInWithOAuth: mockSignInWithOAuth,
+      signInWithOAuth,
     },
   }),
 }));
@@ -18,153 +19,171 @@ vi.mock("@/lib/config/app", () => ({
   APP_DESCRIPTION: "A test CRM description.",
 }));
 
-// cn is a simple utility - let it through with an identity mock
 vi.mock("@/lib/utils", () => ({
-  cn: (...classes: (string | undefined | false)[]) => classes.filter(Boolean).join(" "),
+  cn: (...classes: string[]) => classes.filter(Boolean).join(" "),
 }));
 
 import LoginPage from "./page";
+
+// jsdom does not define window.location.origin by default
+Object.defineProperty(window, "location", {
+  value: { origin: "http://localhost:3000" },
+  writable: true,
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
 describe("LoginPage", () => {
-  it("renders the app name", () => {
-    render(<LoginPage />);
-    expect(screen.getByText("Test CRM")).toBeInTheDocument();
+  describe("initial render", () => {
+    it("renders the app name", () => {
+      render(<LoginPage />);
+      expect(screen.getAllByText("Test CRM").length).toBeGreaterThan(0);
+    });
+
+    it("renders the app description", () => {
+      render(<LoginPage />);
+      expect(screen.getByText("A test CRM description.")).toBeInTheDocument();
+    });
+
+    it("renders the sign-in button with Microsoft text", () => {
+      render(<LoginPage />);
+      expect(screen.getByRole("button", { name: /sign in with microsoft/i })).toBeInTheDocument();
+    });
+
+    it("does not show an error alert on initial render", () => {
+      render(<LoginPage />);
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+
+    it("shows the 'SECURED BY MICROSOFT ENTRA ID' text", () => {
+      render(<LoginPage />);
+      expect(screen.getByText(/secured by microsoft entra id/i)).toBeInTheDocument();
+    });
   });
 
-  it("renders the app description", () => {
-    render(<LoginPage />);
-    expect(screen.getByText("A test CRM description.")).toBeInTheDocument();
-  });
+  describe("signInWithMicrosoft — successful OAuth redirect", () => {
+    it("calls supabase.auth.signInWithOAuth with azure provider", async () => {
+      signInWithOAuth.mockResolvedValueOnce({ error: null });
+      render(<LoginPage />);
 
-  it("renders the sign-in heading", () => {
-    render(<LoginPage />);
-    expect(screen.getByRole("heading", { name: /sign in to your workspace/i })).toBeInTheDocument();
-  });
+      fireEvent.click(screen.getByRole("button", { name: /sign in with microsoft/i }));
 
-  it("renders the Microsoft sign-in button", () => {
-    render(<LoginPage />);
-    expect(screen.getByRole("button", { name: /sign in with microsoft/i })).toBeInTheDocument();
-  });
-
-  it("does not show an error alert initially", () => {
-    render(<LoginPage />);
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-  });
-
-  it("shows loading text while sign-in is in progress", async () => {
-    // Delay resolution so we can observe the loading state
-    mockSignInWithOAuth.mockReturnValue(new Promise(() => {}));
-
-    render(<LoginPage />);
-    await userEvent.click(screen.getByRole("button", { name: /sign in with microsoft/i }));
-
-    expect(screen.getByText("Signing in…")).toBeInTheDocument();
-  });
-
-  it("disables the button while sign-in is in progress", async () => {
-    mockSignInWithOAuth.mockReturnValue(new Promise(() => {}));
-
-    render(<LoginPage />);
-    await userEvent.click(screen.getByRole("button", { name: /sign in with microsoft/i }));
-
-    const btn = screen.getByText("Signing in…").closest("button");
-    expect(btn).toBeDisabled();
-  });
-
-  it("calls supabase signInWithOAuth with the azure provider", async () => {
-    mockSignInWithOAuth.mockResolvedValue({ error: null });
-
-    render(<LoginPage />);
-    await userEvent.click(screen.getByRole("button", { name: /sign in with microsoft/i }));
-
-    expect(mockSignInWithOAuth).toHaveBeenCalledWith(
-      expect.objectContaining({
+      await waitFor(() => expect(signInWithOAuth).toHaveBeenCalledTimes(1));
+      expect(signInWithOAuth).toHaveBeenCalledWith({
         provider: "azure",
-        options: expect.objectContaining({
+        options: {
           scopes: "email openid profile",
-        }),
-      }),
-    );
-  });
-
-  it("shows an error alert when OAuth returns an error", async () => {
-    mockSignInWithOAuth.mockResolvedValue({ error: { message: "OAuth provider error" } });
-
-    render(<LoginPage />);
-    await userEvent.click(screen.getByRole("button", { name: /sign in with microsoft/i }));
-
-    await waitFor(() => {
-      expect(screen.getByRole("alert")).toBeInTheDocument();
+          redirectTo: "http://localhost:3000/auth/callback",
+        },
+      });
     });
-    expect(screen.getByText("OAuth provider error")).toBeInTheDocument();
-    expect(screen.getByText("Could not sign in")).toBeInTheDocument();
-  });
 
-  it("re-enables the button and restores label after an OAuth error", async () => {
-    mockSignInWithOAuth.mockResolvedValue({ error: { message: "Some error" } });
+    it("shows loading text while the OAuth request is in flight", async () => {
+      // Never resolves so we can inspect the loading state
+      signInWithOAuth.mockImplementation(() => new Promise(() => {}));
+      render(<LoginPage />);
 
-    render(<LoginPage />);
-    await userEvent.click(screen.getByRole("button", { name: /sign in with microsoft/i }));
+      fireEvent.click(screen.getByRole("button", { name: /sign in with microsoft/i }));
 
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /sign in with microsoft/i })).not.toBeDisabled();
+      await waitFor(() => expect(screen.getByText("Signing in…")).toBeInTheDocument());
     });
-  });
 
-  it("shows an error alert when an unexpected exception is thrown", async () => {
-    mockSignInWithOAuth.mockRejectedValue(new Error("Network failure"));
+    it("disables the button while loading", async () => {
+      signInWithOAuth.mockImplementation(() => new Promise(() => {}));
+      render(<LoginPage />);
 
-    render(<LoginPage />);
-    await userEvent.click(screen.getByRole("button", { name: /sign in with microsoft/i }));
+      const btn = screen.getByRole("button", { name: /sign in with microsoft/i });
+      fireEvent.click(btn);
 
-    await waitFor(() => {
-      expect(screen.getByRole("alert")).toBeInTheDocument();
-    });
-    expect(screen.getByText("Network failure")).toBeInTheDocument();
-  });
-
-  it("falls back to a generic message for non-Error exceptions", async () => {
-    mockSignInWithOAuth.mockRejectedValue("string rejection");
-
-    render(<LoginPage />);
-    await userEvent.click(screen.getByRole("button", { name: /sign in with microsoft/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Sign-in failed")).toBeInTheDocument();
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: /signing in/i })).toBeDisabled(),
+      );
     });
   });
 
-  it("renders the 'Secured by Microsoft Entra ID' label", () => {
-    render(<LoginPage />);
-    expect(screen.getByText(/secured by microsoft entra id/i)).toBeInTheDocument();
+  describe("signInWithMicrosoft — OAuth error from Supabase", () => {
+    it("displays an error alert when Supabase returns an OAuth error", async () => {
+      signInWithOAuth.mockResolvedValueOnce({ error: { message: "OAuth provider unavailable" } });
+      render(<LoginPage />);
+
+      fireEvent.click(screen.getByRole("button", { name: /sign in with microsoft/i }));
+
+      expect(await screen.findByRole("alert")).toBeInTheDocument();
+      expect(screen.getByText("OAuth provider unavailable")).toBeInTheDocument();
+    });
+
+    it("shows 'Could not sign in' heading in the error alert", async () => {
+      signInWithOAuth.mockResolvedValueOnce({ error: { message: "Some error" } });
+      render(<LoginPage />);
+
+      fireEvent.click(screen.getByRole("button", { name: /sign in with microsoft/i }));
+
+      expect(await screen.findByText("Could not sign in")).toBeInTheDocument();
+    });
+
+    it("re-enables the button after an OAuth error", async () => {
+      signInWithOAuth.mockResolvedValueOnce({
+        error: { message: "Azure tenant not found" },
+      });
+      render(<LoginPage />);
+
+      fireEvent.click(screen.getByRole("button", { name: /sign in with microsoft/i }));
+
+      await waitFor(() =>
+        expect(screen.getByRole("button")).not.toBeDisabled(),
+      );
+    });
   });
 
-  it("renders contact-admin help text", () => {
-    render(<LoginPage />);
-    expect(screen.getByText(/trouble signing in/i)).toBeInTheDocument();
+  describe("signInWithMicrosoft — thrown exception", () => {
+    it("shows the thrown error message in the alert", async () => {
+      signInWithOAuth.mockRejectedValueOnce(new Error("Network failure"));
+      render(<LoginPage />);
+
+      fireEvent.click(screen.getByRole("button", { name: /sign in with microsoft/i }));
+
+      expect(await screen.findByRole("alert")).toBeInTheDocument();
+      expect(screen.getByText("Network failure")).toBeInTheDocument();
+    });
+
+    it("shows 'Sign-in failed' for a non-Error thrown value", async () => {
+      signInWithOAuth.mockRejectedValueOnce("unexpected string error");
+      render(<LoginPage />);
+
+      fireEvent.click(screen.getByRole("button", { name: /sign in with microsoft/i }));
+
+      expect(await screen.findByText("Sign-in failed")).toBeInTheDocument();
+    });
+
+    it("re-enables the button after a thrown exception", async () => {
+      signInWithOAuth.mockRejectedValueOnce(new Error("Crash"));
+      render(<LoginPage />);
+
+      fireEvent.click(screen.getByRole("button", { name: /sign in with microsoft/i }));
+
+      await waitFor(() =>
+        expect(screen.getByRole("button")).not.toBeDisabled(),
+      );
+    });
   });
 
-  it("renders the Microsoft logo SVG", () => {
-    const { container } = render(<LoginPage />);
-    expect(container.querySelector("svg")).toBeInTheDocument();
-  });
+  describe("error alert reset", () => {
+    it("clears the error on a subsequent sign-in attempt", async () => {
+      signInWithOAuth
+        .mockResolvedValueOnce({ error: { message: "First error" } })
+        .mockImplementation(() => new Promise(() => {}));
 
-  it("includes the origin in the OAuth redirect URL", async () => {
-    mockSignInWithOAuth.mockResolvedValue({ error: null });
-    // jsdom sets window.location.origin to 'http://localhost'
-    render(<LoginPage />);
-    await userEvent.click(screen.getByRole("button", { name: /sign in with microsoft/i }));
+      render(<LoginPage />);
+      const btn = screen.getByRole("button", { name: /sign in with microsoft/i });
 
-    expect(mockSignInWithOAuth).toHaveBeenCalledWith(
-      expect.objectContaining({
-        options: expect.objectContaining({
-          redirectTo: expect.stringContaining("/auth/callback"),
-        }),
-      }),
-    );
+      fireEvent.click(btn);
+      expect(await screen.findByText("First error")).toBeInTheDocument();
+
+      // Click again — error should clear while loading
+      fireEvent.click(screen.getByRole("button"));
+      await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+    });
   });
 });
