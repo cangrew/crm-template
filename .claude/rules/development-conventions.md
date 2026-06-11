@@ -1,0 +1,44 @@
+# Development Conventions
+
+These apply to every plan and change in this repo.
+
+This file mirrors `.cursor/rules/development-conventions.mdc` so Claude
+Code and Cursor share the same rules. Keep the two in sync.
+
+## Red-Green-Refactor-Review-Commit Loop
+
+Every behavioral unit follows this loop:
+
+1. **RED** — Write the smallest failing test that expresses the next behavior. Run it; confirm it fails for the right reason. Commit the test alone with a `test:` message.
+2. **GREEN** — Write the minimum code to pass. Run the suite.
+3. **REFACTOR** — Improve structure while the suite stays green.
+4. **REVIEW** — Run a code review pass on the staged diff (see below) before the implementation commit. Findings that change behavior re-enter GREEN/REFACTOR.
+5. **COMMIT** — With the suite green and review clean, commit `feat:`/`fix:` (plus `refactor:` if structure changed).
+
+Coverage target: 80%+ on domain logic and auth/permission helpers (highest-risk areas). UI/E2E focus on critical flows.
+
+## Code Review Before Every Commit
+
+Once a unit is green and refactored, review the staged diff before committing:
+
+- Use the relevant reviewer agent for the layer: `code-reviewer` (general), `typescript-reviewer` (TS/React), `database-reviewer` (SQL/RLS).
+- Check: correctness, security (authz/RLS, input validation, no leaked secrets), readability, test adequacy, and convention adherence.
+- Address findings, keep the suite green, then commit. This complements (does not replace) the automated pre-commit hook.
+
+## Commit Conventions
+
+- **Conventional Commits**, enforced via `commitlint` + Husky `commit-msg` hook. Types: `feat`, `fix`, `test`, `refactor`, `chore`, `docs`, `ci`, `build`.
+- **Small, atomic commits** scoped to one logical change. The TDD loop yields a natural `test:` → `feat:`/`fix:` → `refactor:` sequence.
+- Only commit when explicitly asked, or when a plan step's loop reaches its COMMIT phase.
+
+## Quality Gates
+
+- **Pre-commit** (Husky + lint-staged): ESLint + Prettier + `tsc --noEmit` on staged files; rejects on failure.
+- **TypeScript strict mode** on; no `any` escapes without justification.
+- **CI** (GitHub Actions) runs lint + typecheck + unit + RLS + E2E. Green CI and a review approval are required to merge.
+
+## Branch & PR Flow
+
+- Feature branches off `main`; no direct pushes to `main`.
+- Each plan step maps to one or more focused PRs, not one giant commit.
+- PRs require green CI plus code review approval.
