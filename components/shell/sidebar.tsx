@@ -13,7 +13,7 @@ export function Sidebar({ role }: { role: AppRole }) {
   return (
     <aside className="side">
       <div className="side-logo">
-        <span className="font-display font-700 text-[19px] tracking-tight text-white">
+        <span className="font-display text-[19px] font-bold tracking-tight text-white">
           {APP_NAME}
         </span>
       </div>
