@@ -1,0 +1,84 @@
+{
+  "name": "crm-template",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "db:reset": "supabase db reset --local",
+    "db:types": "supabase gen types typescript --local > lib/supabase/database.types.ts",
+    "db:reset:sample": "supabase db reset --local && PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/seeds/sample.sql",
+    "db:test": "./supabase/tests/run-rls-tests.sh",
+    "db:dev:nuke": "supabase stop --no-backup && supabase start && pnpm db:reset:sample",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "5.4.0",
+    "@supabase/ssr": "0.10.3",
+    "@supabase/supabase-js": "2.106.2",
+    "@tanstack/react-query": "5.100.14",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.17.0",
+    "next": "16.2.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-hook-form": "7.76.1",
+    "tailwind-merge": "^3.6.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "21.0.1",
+    "@commitlint/config-conventional": "21.0.1",
+    "@playwright/test": "1.60.0",
+    "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "@testing-library/user-event": "14.6.1",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "6.0.2",
+    "@vitest/coverage-v8": "4.1.7",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "husky": "9.1.7",
+    "jsdom": "29.1.1",
+    "lint-staged": "17.0.5",
+    "prettier": "3.8.3",
+    "prettier-plugin-tailwindcss": "0.8.0",
+    "supabase": "^2.101.0",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "4.1.7"
+  },
+  "prettier": {
+    "semi": true,
+    "singleQuote": false,
+    "trailingComma": "all",
+    "printWidth": 100,
+    "tabWidth": 2,
+    "plugins": [
+      "prettier-plugin-tailwindcss"
+    ]
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{js,jsx,mjs,cjs,json,css,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}

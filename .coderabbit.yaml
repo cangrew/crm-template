@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit runs in on-demand mode: it does not review automatically.
+# Trigger a review by commenting on a PR:
+#   @coderabbitai review        -> incremental review of latest changes
+#   @coderabbitai full review   -> re-review the whole PR from scratch
+reviews:
+  auto_review:
+    enabled: false
