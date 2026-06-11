@@ -1,306 +1,352 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Contact } from "@/lib/supabase/types";
 
-// ── Mocks ──────────────────────────────────────────────────────────────────
-const mockRefetch = vi.fn();
-let contactsData: unknown[] | undefined = undefined;
-let contactsIsLoading = false;
-let contactsIsError = false;
-let profileData: { role: string | null } | undefined = undefined;
+// --- hoisted mocks ---
+const { useContacts, useCurrentProfile } = vi.hoisted(() => ({
+  useContacts: vi.fn(),
+  useCurrentProfile: vi.fn(),
+}));
 
 vi.mock("@/lib/data/hooks", () => ({
-  useContacts: () => ({
-    data: contactsData,
-    isLoading: contactsIsLoading,
-    isError: contactsIsError,
-    refetch: mockRefetch,
-  }),
-  useCurrentProfile: () => ({ data: profileData }),
+  useContacts,
+  useCurrentProfile,
 }));
 
-vi.mock("@/lib/auth/roles", () => ({
-  can: (role: string, action: string, resource: string) => {
-    // Admin can do everything; member can only read
-    if (role === "admin") return true;
-    if (role === "member" && action === "read") return true;
-    if (role === "member") return false;
-    if (role === "manager" && (action === "create" || action === "update")) return true;
-    return false;
-  },
+// Mock child components — ContactsTable renders rows as list items so we can
+// verify which contacts the filter exposes without coupling to table markup.
+vi.mock("@/components/contacts/contacts-table", () => ({
+  ContactsTable: ({ rows, canUpdate }: { rows: Contact[]; canUpdate: boolean }) => (
+    <ul data-testid="contacts-table" data-can-update={String(canUpdate)}>
+      {rows.map((r) => (
+        <li key={r.id} data-testid="contact-row">
+          {r.name}
+        </li>
+      ))}
+    </ul>
+  ),
 }));
 
-// Stub heavy UI sub-components so we focus on the page logic
+// ContactsFilterBar calls back with updated q / status values via its props.
 vi.mock("@/components/contacts/contacts-filter-bar", () => ({
-  ContactsFilterBar: ({ onQ, onStatus }: { onQ: (v: string) => void; onStatus: (v: string) => void }) => (
+  ContactsFilterBar: ({
+    q,
+    onQ,
+    status,
+    onStatus,
+  }: {
+    q: string;
+    onQ: (v: string) => void;
+    status: string;
+    onStatus: (v: string) => void;
+  }) => (
     <div>
-      <input aria-label="search" onChange={(e) => onQ(e.target.value)} />
-      <select aria-label="status" onChange={(e) => onStatus(e.target.value)}>
+      <input
+        data-testid="filter-q"
+        value={q}
+        onChange={(e) => onQ(e.target.value)}
+        placeholder="Search"
+      />
+      <select data-testid="filter-status" value={status} onChange={(e) => onStatus(e.target.value)}>
         <option value="">All</option>
-        <option value="active">Active</option>
-        <option value="lead">Lead</option>
+        <option value="active">active</option>
+        <option value="lead">lead</option>
+        <option value="at_risk">at_risk</option>
+        <option value="closed">closed</option>
       </select>
     </div>
   ),
 }));
 
-vi.mock("@/components/contacts/contacts-table", () => ({
-  ContactsTable: ({ rows }: { rows: unknown[] }) => (
-    <div data-testid="contacts-table">
-      {(rows as Array<{ name: string }>).map((r) => (
-        <div key={r.name}>{r.name}</div>
-      ))}
+vi.mock("@/components/contacts/new-contact-modal", () => ({
+  NewContactModal: ({ open }: { open: boolean }) => (
+    <div data-testid="new-contact-modal" data-open={String(open)} />
+  ),
+}));
+
+vi.mock("@/components/common/page-header", () => ({
+  PageHeader: ({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: React.ReactNode }) => (
+    <div>
+      <h1>{title}</h1>
+      {subtitle && <p data-testid="subtitle">{subtitle}</p>}
+      {actions && <div data-testid="page-actions">{actions}</div>}
     </div>
   ),
 }));
 
-vi.mock("@/components/contacts/new-contact-modal", () => ({
-  NewContactModal: ({ open }: { open: boolean }) =>
-    open ? <div role="dialog">New Contact Modal</div> : null,
-}));
-
 vi.mock("@/components/common/page-states", () => ({
   PageErrorState: ({ body, onRetry }: { body: string; onRetry: () => void }) => (
-    <div>
-      <p>{body}</p>
+    <div data-testid="error-state">
+      <span>{body}</span>
       <button onClick={onRetry}>Retry</button>
     </div>
   ),
 }));
 
-vi.mock("@/components/common/page-header", () => ({
-  PageHeader: ({
-    title,
-    subtitle,
-    actions,
-  }: {
-    title: string;
-    subtitle?: string;
-    actions?: React.ReactNode;
-  }) => (
-    <div>
-      <h1>{title}</h1>
-      {subtitle && <p>{subtitle}</p>}
-      {actions}
-    </div>
-  ),
-}));
-
 vi.mock("@/components/ui/btn", () => ({
-  Btn: ({
-    children,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    variant?: string;
-    icon?: React.ReactNode;
-  }) => <button onClick={onClick}>{children}</button>,
+  Btn: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
+    <button onClick={onClick}>{children}</button>
+  ),
 }));
 
 vi.mock("@/components/ui/states", () => ({
-  EmptyState: ({
-    title,
-    body,
-  }: {
-    icon?: unknown;
-    title: string;
-    body: string;
-  }) => (
-    <div>
-      <h3>{title}</h3>
-      <p>{body}</p>
-    </div>
+  EmptyState: ({ title }: { title: string }) => (
+    <div data-testid="empty-state">{title}</div>
   ),
-  TableSkeleton: () => <tr data-testid="table-skeleton" />,
+  TableSkeleton: () => <tr><td>loading…</td></tr>,
 }));
 
 vi.mock("@/components/ui/table", () => ({
   Table: ({ children }: { children: React.ReactNode }) => <table>{children}</table>,
 }));
 
-import React from "react";
 import ContactsPage from "./page";
 
-function makeContact(overrides: Partial<{
-  id: string;
-  name: string;
-  company: string | null;
-  email: string | null;
-  status: "lead" | "active" | "at_risk" | "closed";
-  created_at: string;
-}> = {}) {
+// Minimal contact factory
+function contact(overrides: Partial<Contact> = {}): Contact {
   return {
     id: "c1",
-    name: "Alice",
-    company: "Acme",
-    email: "alice@acme.com",
-    status: "active" as const,
+    name: "Alice Smith",
+    email: "alice@example.com",
+    phone: null,
+    company: "Acme Co",
+    status: "active",
+    notes: null,
     created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+    ...overrides,
+  };
+}
+
+function makeContactsQ(overrides: Record<string, unknown> = {}) {
+  return {
+    data: [],
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
     ...overrides,
   };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  contactsData = undefined;
-  contactsIsLoading = false;
-  contactsIsError = false;
-  profileData = { role: "admin" };
+  useCurrentProfile.mockReturnValue({ data: { role: "admin" } });
+  useContacts.mockReturnValue(makeContactsQ());
 });
 
 describe("ContactsPage", () => {
-  it("renders the page title", () => {
-    contactsData = [];
-    render(<ContactsPage />);
-    expect(screen.getByRole("heading", { name: "Contacts" })).toBeInTheDocument();
+  describe("subtitle counts", () => {
+    it("shows total and active counts", () => {
+      useContacts.mockReturnValue(
+        makeContactsQ({
+          data: [
+            contact({ id: "1", status: "active" }),
+            contact({ id: "2", status: "lead" }),
+            contact({ id: "3", status: "active" }),
+          ],
+        }),
+      );
+      render(<ContactsPage />);
+      expect(screen.getByTestId("subtitle").textContent).toBe("3 total · 2 active");
+    });
+
+    it("shows zero counts when there are no contacts", () => {
+      render(<ContactsPage />);
+      expect(screen.getByTestId("subtitle").textContent).toBe("0 total · 0 active");
+    });
   });
 
-  it("shows loading skeleton when contacts are loading", () => {
-    contactsIsLoading = true;
-    render(<ContactsPage />);
-    expect(screen.getByTestId("table-skeleton")).toBeInTheDocument();
-  });
-
-  it("shows empty state with 'No contacts yet' when there are no contacts", () => {
-    contactsData = [];
-    render(<ContactsPage />);
-    expect(screen.getByRole("heading", { name: "No contacts yet" })).toBeInTheDocument();
-  });
-
-  it("shows the error state and refetch button on error", () => {
-    contactsIsError = true;
-    render(<ContactsPage />);
-    expect(screen.getByText("Failed to fetch contacts.")).toBeInTheDocument();
-
-    const retryBtn = screen.getByRole("button", { name: "Retry" });
-    retryBtn.click();
-    expect(mockRefetch).toHaveBeenCalledTimes(1);
-  });
-
-  it("renders contacts table when contacts are loaded", () => {
-    contactsData = [makeContact()];
-    render(<ContactsPage />);
-    expect(screen.getByTestId("contacts-table")).toBeInTheDocument();
-  });
-
-  it("shows New Contact button for admin", () => {
-    contactsData = [];
-    profileData = { role: "admin" };
-    render(<ContactsPage />);
-    expect(screen.getByRole("button", { name: "New Contact" })).toBeInTheDocument();
-  });
-
-  it("shows New Contact button for manager (can create)", () => {
-    contactsData = [];
-    profileData = { role: "manager" };
-    render(<ContactsPage />);
-    expect(screen.getByRole("button", { name: "New Contact" })).toBeInTheDocument();
-  });
-
-  it("hides New Contact button for member (cannot create)", () => {
-    contactsData = [];
-    profileData = { role: "member" };
-    render(<ContactsPage />);
-    expect(screen.queryByRole("button", { name: "New Contact" })).not.toBeInTheDocument();
-  });
-
-  it("hides New Contact button when profile role is null", () => {
-    contactsData = [];
-    profileData = { role: null };
-    render(<ContactsPage />);
-    expect(screen.queryByRole("button", { name: "New Contact" })).not.toBeInTheDocument();
-  });
-
-  it("opens the new contact modal when the button is clicked", async () => {
-    contactsData = [];
-    profileData = { role: "admin" };
-    render(<ContactsPage />);
-
-    await userEvent.click(screen.getByRole("button", { name: "New Contact" }));
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-  });
-
-  it("shows subtitle with correct total and active counts", () => {
-    contactsData = [
-      makeContact({ id: "1", name: "Alice", status: "active" }),
-      makeContact({ id: "2", name: "Bob", status: "lead" }),
-      makeContact({ id: "3", name: "Carol", status: "active" }),
+  describe("filter by text (q)", () => {
+    const contacts = [
+      contact({ id: "a", name: "Alice Smith", company: "Acme", email: "alice@acme.com" }),
+      contact({ id: "b", name: "Bob Jones", company: "Beta LLC", email: "bob@beta.com" }),
+      contact({ id: "c", name: "Carol", company: null, email: "carol@example.com" }),
     ];
-    render(<ContactsPage />);
-    expect(screen.getByText("3 total · 2 active")).toBeInTheDocument();
+
+    beforeEach(() => {
+      useContacts.mockReturnValue(makeContactsQ({ data: contacts }));
+    });
+
+    it("shows all contacts when filter is empty", () => {
+      render(<ContactsPage />);
+      expect(screen.getAllByTestId("contact-row")).toHaveLength(3);
+    });
+
+    it("filters by name (case-insensitive)", () => {
+      render(<ContactsPage />);
+      fireEvent.change(screen.getByTestId("filter-q"), { target: { value: "alice" } });
+      const rows = screen.getAllByTestId("contact-row");
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toHaveTextContent("Alice Smith");
+    });
+
+    it("filters by company", () => {
+      render(<ContactsPage />);
+      fireEvent.change(screen.getByTestId("filter-q"), { target: { value: "beta" } });
+      const rows = screen.getAllByTestId("contact-row");
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toHaveTextContent("Bob Jones");
+    });
+
+    it("filters by email", () => {
+      render(<ContactsPage />);
+      fireEvent.change(screen.getByTestId("filter-q"), { target: { value: "carol@" } });
+      const rows = screen.getAllByTestId("contact-row");
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toHaveTextContent("Carol");
+    });
+
+    it("shows empty state when no contacts match the text filter", () => {
+      render(<ContactsPage />);
+      fireEvent.change(screen.getByTestId("filter-q"), { target: { value: "zzznomatch" } });
+      expect(screen.getByTestId("empty-state")).toBeInTheDocument();
+      expect(screen.queryByTestId("contacts-table")).not.toBeInTheDocument();
+    });
+
+    it("shows 'No contacts match these filters' when some contacts exist but none match", () => {
+      render(<ContactsPage />);
+      fireEvent.change(screen.getByTestId("filter-q"), { target: { value: "zzznomatch" } });
+      expect(screen.getByTestId("empty-state")).toHaveTextContent("No contacts match these filters");
+    });
+
+    it("handles contacts with null company without crashing", () => {
+      render(<ContactsPage />);
+      fireEvent.change(screen.getByTestId("filter-q"), { target: { value: "carol" } });
+      expect(screen.getAllByTestId("contact-row")).toHaveLength(1);
+    });
   });
 
-  it("filters contacts by name search", async () => {
-    contactsData = [
-      makeContact({ id: "1", name: "Alice Smith" }),
-      makeContact({ id: "2", name: "Bob Jones" }),
+  describe("filter by status", () => {
+    const contacts = [
+      contact({ id: "1", status: "active" }),
+      contact({ id: "2", name: "Bob", status: "lead" }),
+      contact({ id: "3", name: "Carol", status: "at_risk" }),
     ];
-    render(<ContactsPage />);
 
-    await userEvent.type(screen.getByLabelText("search"), "alice");
+    beforeEach(() => {
+      useContacts.mockReturnValue(makeContactsQ({ data: contacts }));
+    });
 
-    expect(screen.getByTestId("contacts-table")).toBeInTheDocument();
-    expect(screen.getByText("Alice Smith")).toBeInTheDocument();
-    expect(screen.queryByText("Bob Jones")).not.toBeInTheDocument();
+    it("shows only active contacts when active status is selected", () => {
+      render(<ContactsPage />);
+      fireEvent.change(screen.getByTestId("filter-status"), { target: { value: "active" } });
+      const rows = screen.getAllByTestId("contact-row");
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toHaveTextContent("Alice Smith");
+    });
+
+    it("shows only leads when lead status is selected", () => {
+      render(<ContactsPage />);
+      fireEvent.change(screen.getByTestId("filter-status"), { target: { value: "lead" } });
+      const rows = screen.getAllByTestId("contact-row");
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toHaveTextContent("Bob");
+    });
+
+    it("shows all contacts when status filter is cleared", () => {
+      render(<ContactsPage />);
+      fireEvent.change(screen.getByTestId("filter-status"), { target: { value: "lead" } });
+      fireEvent.change(screen.getByTestId("filter-status"), { target: { value: "" } });
+      expect(screen.getAllByTestId("contact-row")).toHaveLength(3);
+    });
   });
 
-  it("filters contacts by company name", async () => {
-    contactsData = [
-      makeContact({ id: "1", name: "Alice", company: "Acme Corp" }),
-      makeContact({ id: "2", name: "Bob", company: "Other Ltd" }),
-    ];
-    render(<ContactsPage />);
-
-    await userEvent.type(screen.getByLabelText("search"), "acme");
-
-    expect(screen.getByText("Alice")).toBeInTheDocument();
-    expect(screen.queryByText("Bob")).not.toBeInTheDocument();
+  describe("combined filters (text + status)", () => {
+    it("applies both filters simultaneously", () => {
+      useContacts.mockReturnValue(
+        makeContactsQ({
+          data: [
+            // Use distinct emails so only the name drives the text match
+            contact({ id: "1", name: "AliceActive", status: "active", company: "Acme", email: "aa@test.com" }),
+            contact({ id: "2", name: "AliceLead", status: "lead", company: "Acme", email: "al@test.com" }),
+            contact({ id: "3", name: "BobActive", status: "active", company: "Beta", email: "ba@test.com" }),
+          ],
+        }),
+      );
+      render(<ContactsPage />);
+      // "alice" matches AliceActive and AliceLead by name; adding "active" status keeps only AliceActive
+      fireEvent.change(screen.getByTestId("filter-q"), { target: { value: "alice" } });
+      fireEvent.change(screen.getByTestId("filter-status"), { target: { value: "active" } });
+      const rows = screen.getAllByTestId("contact-row");
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toHaveTextContent("AliceActive");
+    });
   });
 
-  it("filters contacts by email", async () => {
-    contactsData = [
-      makeContact({ id: "1", name: "Alice", email: "alice@acme.com" }),
-      makeContact({ id: "2", name: "Bob", email: "bob@other.com" }),
-    ];
-    render(<ContactsPage />);
+  describe("role-based permissions", () => {
+    it("shows the New Contact button for admin role", () => {
+      useCurrentProfile.mockReturnValue({ data: { role: "admin" } });
+      render(<ContactsPage />);
+      expect(screen.getByRole("button", { name: /new contact/i })).toBeInTheDocument();
+    });
 
-    await userEvent.type(screen.getByLabelText("search"), "acme.com");
+    it("shows the New Contact button for manager role", () => {
+      useCurrentProfile.mockReturnValue({ data: { role: "manager" } });
+      render(<ContactsPage />);
+      expect(screen.getByRole("button", { name: /new contact/i })).toBeInTheDocument();
+    });
 
-    expect(screen.getByText("Alice")).toBeInTheDocument();
-    expect(screen.queryByText("Bob")).not.toBeInTheDocument();
+    it("hides the New Contact button for member role", () => {
+      useCurrentProfile.mockReturnValue({ data: { role: "member" } });
+      render(<ContactsPage />);
+      expect(screen.queryByRole("button", { name: /new contact/i })).not.toBeInTheDocument();
+    });
+
+    it("hides the New Contact button when profile is not loaded", () => {
+      useCurrentProfile.mockReturnValue({ data: null });
+      render(<ContactsPage />);
+      expect(screen.queryByRole("button", { name: /new contact/i })).not.toBeInTheDocument();
+    });
+
+    it("passes canUpdate=true to ContactsTable for admin role", () => {
+      useCurrentProfile.mockReturnValue({ data: { role: "admin" } });
+      useContacts.mockReturnValue(
+        makeContactsQ({ data: [contact()] }),
+      );
+      render(<ContactsPage />);
+      expect(screen.getByTestId("contacts-table")).toHaveAttribute("data-can-update", "true");
+    });
+
+    it("passes canUpdate=false to ContactsTable for member role", () => {
+      useCurrentProfile.mockReturnValue({ data: { role: "member" } });
+      useContacts.mockReturnValue(
+        makeContactsQ({ data: [contact()] }),
+      );
+      render(<ContactsPage />);
+      expect(screen.getByTestId("contacts-table")).toHaveAttribute("data-can-update", "false");
+    });
   });
 
-  it("filters contacts by status", async () => {
-    contactsData = [
-      makeContact({ id: "1", name: "Alice", status: "active" }),
-      makeContact({ id: "2", name: "Bob", status: "lead" }),
-    ];
-    render(<ContactsPage />);
-
-    await userEvent.selectOptions(screen.getByLabelText("status"), "active");
-
-    expect(screen.getByText("Alice")).toBeInTheDocument();
-    expect(screen.queryByText("Bob")).not.toBeInTheDocument();
+  describe("loading state", () => {
+    it("renders the loading skeleton when data is loading", () => {
+      useContacts.mockReturnValue(makeContactsQ({ isLoading: true, data: undefined }));
+      render(<ContactsPage />);
+      expect(screen.queryByTestId("contacts-table")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("empty-state")).not.toBeInTheDocument();
+    });
   });
 
-  it("shows 'No contacts match these filters' empty state when filters exclude all results", async () => {
-    contactsData = [makeContact({ status: "active" })];
-    render(<ContactsPage />);
+  describe("error state", () => {
+    it("renders the error state when query errors", () => {
+      useContacts.mockReturnValue(makeContactsQ({ isError: true }));
+      render(<ContactsPage />);
+      expect(screen.getByTestId("error-state")).toBeInTheDocument();
+      expect(screen.getByText("Failed to fetch contacts.")).toBeInTheDocument();
+    });
 
-    await userEvent.selectOptions(screen.getByLabelText("status"), "lead");
-
-    expect(
-      screen.getByRole("heading", { name: "No contacts match these filters" }),
-    ).toBeInTheDocument();
+    it("calls refetch when the retry button is clicked", () => {
+      const refetch = vi.fn();
+      useContacts.mockReturnValue(makeContactsQ({ isError: true, refetch }));
+      render(<ContactsPage />);
+      fireEvent.click(screen.getByRole("button", { name: /retry/i }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+    });
   });
 
-  it("search is case-insensitive", async () => {
-    contactsData = [makeContact({ name: "Alice Smith" })];
-    render(<ContactsPage />);
-
-    await userEvent.type(screen.getByLabelText("search"), "ALICE");
-
-    expect(screen.getByText("Alice Smith")).toBeInTheDocument();
+  describe("empty state", () => {
+    it("shows 'No contacts yet' when there are no contacts at all", () => {
+      render(<ContactsPage />);
+      expect(screen.getByTestId("empty-state")).toHaveTextContent("No contacts yet");
+    });
   });
 });

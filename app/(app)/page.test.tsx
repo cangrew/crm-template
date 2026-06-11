@@ -1,65 +1,37 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import React from "react";
+import type { Contact } from "@/lib/supabase/types";
 
-// ── Mocks ──────────────────────────────────────────────────────────────────
-const mockRefetch = vi.fn();
-let contactsData: unknown[] | undefined = undefined;
-let contactsIsLoading = false;
-let contactsIsError = false;
-let profileData: {
-  full_name: string | null;
-  email: string | null;
-  role: string | null;
-} | undefined = undefined;
-
-vi.mock("@/lib/data/hooks", () => ({
-  useContacts: () => ({
-    data: contactsData,
-    isLoading: contactsIsLoading,
-    isError: contactsIsError,
-    refetch: mockRefetch,
-  }),
-  useCurrentProfile: () => ({ data: profileData }),
+// --- hoisted mocks ---
+const { useContacts, useCurrentProfile } = vi.hoisted(() => ({
+  useContacts: vi.fn(),
+  useCurrentProfile: vi.fn(),
 }));
 
-vi.mock("@/lib/domain/enums", () => ({
-  APP_ROLE_LABELS: {
-    admin: "Admin",
-    manager: "Manager",
-    member: "Member",
-  },
+vi.mock("@/lib/data/hooks", () => ({
+  useContacts,
+  useCurrentProfile,
 }));
 
 vi.mock("next/link", () => ({
-  default: ({
-    href,
-    children,
-    className,
-  }: {
-    href: string;
-    children: React.ReactNode;
-    className?: string;
-  }) => (
-    <a href={href} className={className}>
-      {children}
-    </a>
+  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
+    <a href={href}>{children}</a>
   ),
 }));
 
 vi.mock("@/components/common/page-header", () => ({
   PageHeader: ({ title, subtitle }: { title: string; subtitle?: string }) => (
     <div>
-      <h1>{title}</h1>
-      {subtitle && <p>{subtitle}</p>}
+      <h1 data-testid="page-title">{title}</h1>
+      {subtitle && <p data-testid="page-subtitle">{subtitle}</p>}
     </div>
   ),
 }));
 
 vi.mock("@/components/common/page-states", () => ({
   PageErrorState: ({ body, onRetry }: { body: string; onRetry: () => void }) => (
-    <div>
-      <p>{body}</p>
+    <div data-testid="error-state">
+      <span>{body}</span>
       <button onClick={onRetry}>Retry</button>
     </div>
   ),
@@ -69,10 +41,9 @@ vi.mock("@/components/common/stat-card", () => ({
   StatGrid: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="stat-grid">{children}</div>
   ),
-  StatCard: ({ label, value }: { label: string; value: string | number }) => (
-    <div data-testid={`stat-${label.toLowerCase().replace(/ /g, "-")}`}>
-      <span>{label}</span>
-      <span data-testid="stat-value">{value}</span>
+  StatCard: ({ label, value }: { label: string; value: number | string }) => (
+    <div data-testid="stat-card" data-label={label}>
+      {String(value)}
     </div>
   ),
 }));
@@ -84,205 +55,227 @@ vi.mock("@/components/common/entity-table", () => ({
     emptyText,
   }: {
     title: string;
-    rows: unknown[];
+    rows: Contact[];
     emptyText?: string;
     columns?: unknown[];
     clickableRows?: boolean;
   }) => (
     <div data-testid="entity-table">
-      <h2>{title}</h2>
-      {rows.length === 0 && emptyText ? (
-        <p>{emptyText}</p>
+      <span data-testid="table-title">{title}</span>
+      {rows.length === 0 ? (
+        <span data-testid="table-empty">{emptyText}</span>
       ) : (
-        (rows as Array<{ id: string; name: string }>).map((r) => (
-          <div key={r.id}>{r.name}</div>
-        ))
+        <ul>
+          {rows.map((r) => (
+            <li key={r.id} data-testid="recent-row" data-id={r.id}>
+              {r.name}
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   ),
 }));
 
 vi.mock("@/components/ui/badges", () => ({
-  ContactBadge: ({ status }: { status: string }) => <span>{status}</span>,
+  ContactBadge: ({ status }: { status: string }) => (
+    <span data-testid="contact-badge">{status}</span>
+  ),
 }));
 
 import DashboardPage from "./page";
 
-function makeContact(overrides: Partial<{
-  id: string;
-  name: string;
-  company: string | null;
-  status: "lead" | "active" | "at_risk" | "closed";
-  created_at: string;
-}> = {}) {
+function contact(overrides: Partial<Contact> = {}): Contact {
   return {
     id: "c1",
     name: "Alice",
-    company: "Acme",
-    status: "active" as const,
-    created_at: "2026-01-01T00:00:00Z",
-    email: null,
+    email: "alice@example.com",
     phone: null,
+    company: "Acme",
+    status: "active",
     notes: null,
+    created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
+    ...overrides,
+  };
+}
+
+function makeContactsQ(overrides: Record<string, unknown> = {}) {
+  return {
+    data: undefined,
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
     ...overrides,
   };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  contactsData = undefined;
-  contactsIsLoading = false;
-  contactsIsError = false;
-  profileData = undefined;
+  useCurrentProfile.mockReturnValue({ data: null });
+  useContacts.mockReturnValue(makeContactsQ({ data: [] }));
 });
 
 describe("DashboardPage", () => {
-  it("shows error state when contacts fail to load", () => {
-    contactsIsError = true;
-    render(<DashboardPage />);
-    expect(screen.getByText("Failed to load the dashboard.")).toBeInTheDocument();
+  describe("welcome greeting", () => {
+    it("uses the first name from full_name", () => {
+      useCurrentProfile.mockReturnValue({
+        data: { full_name: "Jane Doe", email: "jane@example.com", role: "admin" },
+      });
+      render(<DashboardPage />);
+      expect(screen.getByTestId("page-title").textContent).toBe("Welcome back, Jane");
+    });
+
+    it("falls back to email when full_name is absent", () => {
+      useCurrentProfile.mockReturnValue({
+        data: { full_name: null, email: "bob@example.com", role: "member" },
+      });
+      render(<DashboardPage />);
+      expect(screen.getByTestId("page-title").textContent).toBe("Welcome back, bob@example.com");
+    });
+
+    it("falls back to 'there' when both full_name and email are absent", () => {
+      useCurrentProfile.mockReturnValue({ data: null });
+      render(<DashboardPage />);
+      expect(screen.getByTestId("page-title").textContent).toBe("Welcome back, there");
+    });
   });
 
-  it("calls refetch when Retry is clicked in error state", () => {
-    contactsIsError = true;
-    render(<DashboardPage />);
-    screen.getByRole("button", { name: "Retry" }).click();
-    expect(mockRefetch).toHaveBeenCalledTimes(1);
+  describe("role subtitle", () => {
+    it("shows 'Signed in as Admin' for admin role", () => {
+      useCurrentProfile.mockReturnValue({
+        data: { full_name: "Dev", email: "dev@x.com", role: "admin" },
+      });
+      render(<DashboardPage />);
+      expect(screen.getByTestId("page-subtitle").textContent).toBe("Signed in as Admin");
+    });
+
+    it("shows 'Signed in as Manager' for manager role", () => {
+      useCurrentProfile.mockReturnValue({
+        data: { full_name: "Dev", email: "dev@x.com", role: "manager" },
+      });
+      render(<DashboardPage />);
+      expect(screen.getByTestId("page-subtitle").textContent).toBe("Signed in as Manager");
+    });
+
+    it("shows fallback subtitle when role is not set", () => {
+      useCurrentProfile.mockReturnValue({ data: null });
+      render(<DashboardPage />);
+      expect(screen.getByTestId("page-subtitle").textContent).toBe("Here's where things stand");
+    });
   });
 
-  it("shows '—' in stat cards while contacts are loading", () => {
-    contactsIsLoading = true;
-    contactsData = undefined;
-    render(<DashboardPage />);
-    const statValues = screen.getAllByTestId("stat-value");
-    // All four stat values should be '—' while loading
-    expect(statValues.every((el) => el.textContent === "—")).toBe(true);
+  describe("byStatus counts in stat cards", () => {
+    beforeEach(() => {
+      useCurrentProfile.mockReturnValue({ data: { full_name: "Dev", email: "d@x.com", role: "admin" } });
+    });
+
+    it("shows correct counts for each status", () => {
+      useContacts.mockReturnValue(
+        makeContactsQ({
+          data: [
+            contact({ id: "1", status: "active" }),
+            contact({ id: "2", status: "active" }),
+            contact({ id: "3", status: "lead" }),
+            contact({ id: "4", status: "at_risk" }),
+            contact({ id: "5", status: "at_risk" }),
+            contact({ id: "6", status: "closed" }),
+          ],
+        }),
+      );
+      render(<DashboardPage />);
+
+      const cards = screen.getAllByTestId("stat-card");
+      const byLabel = (label: string) =>
+        cards.find((c) => c.getAttribute("data-label") === label)!;
+
+      expect(byLabel("Total contacts").textContent).toBe("6");
+      expect(byLabel("Active").textContent).toBe("2");
+      expect(byLabel("Leads").textContent).toBe("1");
+      expect(byLabel("At risk").textContent).toBe("2");
+    });
+
+    it("shows 0 for all counts when there are no contacts", () => {
+      useContacts.mockReturnValue(makeContactsQ({ data: [] }));
+      render(<DashboardPage />);
+      const cards = screen.getAllByTestId("stat-card");
+      cards.forEach((c) => expect(c.textContent).toBe("0"));
+    });
+
+    it("shows '—' for all counts while loading", () => {
+      useContacts.mockReturnValue(makeContactsQ({ isLoading: true, data: undefined }));
+      render(<DashboardPage />);
+      const cards = screen.getAllByTestId("stat-card");
+      cards.forEach((c) => expect(c.textContent).toBe("—"));
+    });
   });
 
-  it("renders the stat grid", () => {
-    contactsData = [];
-    render(<DashboardPage />);
-    expect(screen.getByTestId("stat-grid")).toBeInTheDocument();
+  describe("recent contacts (sorted by created_at, limited to 5)", () => {
+    it("sorts contacts by created_at descending", () => {
+      useContacts.mockReturnValue(
+        makeContactsQ({
+          data: [
+            contact({ id: "old", name: "Old Contact", created_at: "2026-01-01T00:00:00Z" }),
+            contact({ id: "new", name: "New Contact", created_at: "2026-06-01T00:00:00Z" }),
+            contact({ id: "mid", name: "Mid Contact", created_at: "2026-03-01T00:00:00Z" }),
+          ],
+        }),
+      );
+      render(<DashboardPage />);
+      const rows = screen.getAllByTestId("recent-row");
+      expect(rows[0]).toHaveTextContent("New Contact");
+      expect(rows[1]).toHaveTextContent("Mid Contact");
+      expect(rows[2]).toHaveTextContent("Old Contact");
+    });
+
+    it("limits the recent list to 5 entries", () => {
+      const sixContacts = Array.from({ length: 6 }, (_, i) =>
+        contact({
+          id: `c${i}`,
+          name: `Contact ${i}`,
+          created_at: `2026-01-0${i + 1}T00:00:00Z`,
+        }),
+      );
+      useContacts.mockReturnValue(makeContactsQ({ data: sixContacts }));
+      render(<DashboardPage />);
+      expect(screen.getAllByTestId("recent-row")).toHaveLength(5);
+    });
+
+    it("shows empty text when there are no contacts", () => {
+      useContacts.mockReturnValue(makeContactsQ({ data: [] }));
+      render(<DashboardPage />);
+      expect(screen.getByTestId("table-empty")).toHaveTextContent(
+        "No contacts yet — add one from the Contacts page.",
+      );
+    });
+
+    it("does not mutate the original contacts array when sorting", () => {
+      const original = [
+        contact({ id: "b", name: "B", created_at: "2026-02-01T00:00:00Z" }),
+        contact({ id: "a", name: "A", created_at: "2026-01-01T00:00:00Z" }),
+      ];
+      useContacts.mockReturnValue(makeContactsQ({ data: original }));
+      render(<DashboardPage />);
+      // original[0] should still be "b" (sort uses spread copy)
+      expect(original[0].id).toBe("b");
+    });
   });
 
-  it("shows total contacts count", () => {
-    contactsData = [
-      makeContact({ id: "1" }),
-      makeContact({ id: "2" }),
-      makeContact({ id: "3" }),
-    ];
-    render(<DashboardPage />);
-    const totalStat = screen.getByTestId("stat-total-contacts");
-    expect(totalStat).toHaveTextContent("3");
-  });
+  describe("error state", () => {
+    it("renders the error state when contacts query errors", () => {
+      useContacts.mockReturnValue(makeContactsQ({ isError: true }));
+      render(<DashboardPage />);
+      expect(screen.getByTestId("error-state")).toBeInTheDocument();
+      expect(screen.getByText("Failed to load the dashboard.")).toBeInTheDocument();
+    });
 
-  it("counts active contacts correctly", () => {
-    contactsData = [
-      makeContact({ id: "1", status: "active" }),
-      makeContact({ id: "2", status: "lead" }),
-      makeContact({ id: "3", status: "active" }),
-    ];
-    render(<DashboardPage />);
-    const activeStat = screen.getByTestId("stat-active");
-    expect(activeStat).toHaveTextContent("2");
-  });
-
-  it("counts lead contacts correctly", () => {
-    contactsData = [
-      makeContact({ id: "1", status: "lead" }),
-      makeContact({ id: "2", status: "active" }),
-    ];
-    render(<DashboardPage />);
-    const leadsStat = screen.getByTestId("stat-leads");
-    expect(leadsStat).toHaveTextContent("1");
-  });
-
-  it("counts at_risk contacts correctly", () => {
-    contactsData = [
-      makeContact({ id: "1", status: "at_risk" }),
-      makeContact({ id: "2", status: "at_risk" }),
-      makeContact({ id: "3", status: "active" }),
-    ];
-    render(<DashboardPage />);
-    const atRiskStat = screen.getByTestId("stat-at-risk");
-    expect(atRiskStat).toHaveTextContent("2");
-  });
-
-  it("renders the recent contacts entity table", () => {
-    contactsData = [];
-    render(<DashboardPage />);
-    expect(screen.getByTestId("entity-table")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Recent contacts" })).toBeInTheDocument();
-  });
-
-  it("shows empty text when there are no contacts", () => {
-    contactsData = [];
-    render(<DashboardPage />);
-    expect(
-      screen.getByText("No contacts yet — add one from the Contacts page."),
-    ).toBeInTheDocument();
-  });
-
-  it("limits recent contacts to 5", () => {
-    contactsData = Array.from({ length: 8 }, (_, i) =>
-      makeContact({
-        id: `c${i}`,
-        name: `Contact ${i}`,
-        created_at: `2026-01-0${i + 1}T00:00:00Z`,
-      }),
-    );
-    render(<DashboardPage />);
-    // The entity table stub renders one div per row with the contact name
-    const contactRows = screen.getAllByText(/Contact \d/);
-    expect(contactRows).toHaveLength(5);
-  });
-
-  it("sorts recent contacts by created_at descending (newest first)", () => {
-    contactsData = [
-      makeContact({ id: "old", name: "Old Contact", created_at: "2026-01-01T00:00:00Z" }),
-      makeContact({ id: "new", name: "New Contact", created_at: "2026-06-01T00:00:00Z" }),
-    ];
-    render(<DashboardPage />);
-    const contactNames = screen.getAllByText(/Contact/).map((el) => el.textContent);
-    expect(contactNames[0]).toBe("New Contact");
-    expect(contactNames[1]).toBe("Old Contact");
-  });
-
-  it("greets the user by first name when full_name is available", () => {
-    profileData = { full_name: "Jane Doe", email: "jane@example.com", role: "admin" };
-    contactsData = [];
-    render(<DashboardPage />);
-    expect(screen.getByRole("heading", { name: "Welcome back, Jane" })).toBeInTheDocument();
-  });
-
-  it("greets by email when full_name is absent", () => {
-    profileData = { full_name: null, email: "jane@example.com", role: "admin" };
-    contactsData = [];
-    render(<DashboardPage />);
-    expect(
-      screen.getByRole("heading", { name: "Welcome back, jane@example.com" }),
-    ).toBeInTheDocument();
-  });
-
-  it("falls back to 'there' when neither name nor email is available", () => {
-    profileData = undefined;
-    contactsData = [];
-    render(<DashboardPage />);
-    expect(screen.getByRole("heading", { name: "Welcome back, there" })).toBeInTheDocument();
-  });
-
-  it("shows role label in subtitle when role is set", () => {
-    profileData = { full_name: "Jane", email: "jane@example.com", role: "admin" };
-    contactsData = [];
-    render(<DashboardPage />);
-    expect(screen.getByText("Signed in as Admin")).toBeInTheDocument();
-  });
-
-  it("shows generic subtitle when role is null", () => {
-    profileData = { full_name: "Jane", email: "jane@example.com", role: null };
-    contactsData = [];
-    render(<DashboardPage />);
-    expect(screen.getByText("Here's where things stand")).toBeInTheDocument();
+    it("calls refetch on retry", () => {
+      const refetch = vi.fn();
+      useContacts.mockReturnValue(makeContactsQ({ isError: true, refetch }));
+      render(<DashboardPage />);
+      const btn = screen.getByRole("button", { name: /retry/i });
+      btn.click();
+      expect(refetch).toHaveBeenCalledTimes(1);
+    });
   });
 });

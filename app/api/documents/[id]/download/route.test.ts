@@ -1,11 +1,15 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// ── Hoisted mocks (must come before any import that transitively loads the SUT)
-const mockRequireApiRole = vi.hoisted(() => vi.fn());
-const mockGetDocument = vi.hoisted(() => vi.fn());
-const mockCreateSignedDownloadUrl = vi.hoisted(() => vi.fn());
-const mockCreateClient = vi.hoisted(() => vi.fn());
+// --- hoisted mocks ---
+const { requireApiRole, mockCreateClient } = vi.hoisted(() => ({
+  requireApiRole: vi.fn(),
+  mockCreateClient: vi.fn(),
+}));
+const { getDocument, createSignedDownloadUrl } = vi.hoisted(() => ({
+  getDocument: vi.fn(),
+  createSignedDownloadUrl: vi.fn(),
+}));
 
 vi.mock("@/lib/auth/authorize", () => ({
   ALL_ROLES: ["admin", "manager", "member"],
@@ -13,12 +17,12 @@ vi.mock("@/lib/auth/authorize", () => ({
     401: { error: "Unauthorized" },
     403: { error: "Forbidden" },
   },
-  requireApiRole: mockRequireApiRole,
+  requireApiRole,
 }));
 
 vi.mock("@/lib/data/documents", () => ({
-  getDocument: mockGetDocument,
-  createSignedDownloadUrl: mockCreateSignedDownloadUrl,
+  getDocument,
+  createSignedDownloadUrl,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -27,89 +31,129 @@ vi.mock("@/lib/supabase/server", () => ({
 
 import { GET } from "./route";
 
-/** Build a minimal NextRequest pointing at the download route. */
-function makeRequest(id: string) {
-  return new NextRequest(`http://localhost/api/documents/${id}/download`);
-}
+const supabase = {} as never;
 
-/** Unwrap the JSON body of a NextResponse. */
-async function json(res: Response) {
-  return res.json() as Promise<Record<string, unknown>>;
+function makeRequest(id = "doc-123") {
+  return {
+    req: new NextRequest("http://localhost/api/documents/" + id + "/download"),
+    params: Promise.resolve({ id }),
+  };
 }
-
-const stubSupabase = {};
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockCreateClient.mockResolvedValue(stubSupabase);
+  mockCreateClient.mockResolvedValue(supabase);
 });
 
 describe("GET /api/documents/[id]/download", () => {
-  it("returns 401 when requireApiRole reports no authenticated user", async () => {
-    mockRequireApiRole.mockResolvedValue({ ok: false, status: 401 });
+  describe("authentication & authorization", () => {
+    it("returns 401 when the caller is not authenticated", async () => {
+      requireApiRole.mockResolvedValueOnce({ ok: false, status: 401 });
 
-    const res = await GET(makeRequest("doc-1"), { params: Promise.resolve({ id: "doc-1" }) });
+      const { req, params } = makeRequest();
+      const res = await GET(req, { params });
 
-    expect(res.status).toBe(401);
-    await expect(json(res)).resolves.toEqual({ error: "Unauthorized" });
+      expect(res.status).toBe(401);
+      const body = await res.json();
+      expect(body).toEqual({ error: "Unauthorized" });
+    });
+
+    it("returns 403 when the caller is authenticated but forbidden", async () => {
+      requireApiRole.mockResolvedValueOnce({ ok: false, status: 403 });
+
+      const { req, params } = makeRequest();
+      const res = await GET(req, { params });
+
+      expect(res.status).toBe(403);
+      const body = await res.json();
+      expect(body).toEqual({ error: "Forbidden" });
+    });
+
+    it("passes ALL_ROLES to requireApiRole so every active role can download", async () => {
+      requireApiRole.mockResolvedValueOnce({ ok: true, profile: { id: "u1", role: "member" } });
+      getDocument.mockResolvedValueOnce({ id: "doc-1", storage_path: "path/file.pdf" });
+      createSignedDownloadUrl.mockResolvedValueOnce("https://signed.url/file.pdf");
+
+      const { req, params } = makeRequest("doc-1");
+      await GET(req, { params });
+
+      expect(requireApiRole).toHaveBeenCalledWith(supabase, ["admin", "manager", "member"]);
+    });
   });
 
-  it("returns 403 when requireApiRole reports insufficient permissions", async () => {
-    mockRequireApiRole.mockResolvedValue({ ok: false, status: 403 });
+  describe("document lookup", () => {
+    it("returns 404 when the document does not exist", async () => {
+      requireApiRole.mockResolvedValueOnce({ ok: true, profile: { id: "u1", role: "admin" } });
+      getDocument.mockRejectedValueOnce(new Error("Row not found"));
 
-    const res = await GET(makeRequest("doc-2"), { params: Promise.resolve({ id: "doc-2" }) });
+      const { req, params } = makeRequest("nonexistent");
+      const res = await GET(req, { params });
 
-    expect(res.status).toBe(403);
-    await expect(json(res)).resolves.toEqual({ error: "Forbidden" });
+      expect(res.status).toBe(404);
+      const body = await res.json();
+      expect(body).toEqual({ error: "Document not found" });
+    });
+
+    it("calls getDocument with the id from the route params", async () => {
+      requireApiRole.mockResolvedValueOnce({ ok: true, profile: { id: "u1", role: "admin" } });
+      getDocument.mockResolvedValueOnce({ id: "doc-42", storage_path: "docs/file.pdf" });
+      createSignedDownloadUrl.mockResolvedValueOnce("https://signed.url/file.pdf");
+
+      const { req, params } = makeRequest("doc-42");
+      await GET(req, { params });
+
+      expect(getDocument).toHaveBeenCalledWith(supabase, "doc-42");
+    });
   });
 
-  it("returns 404 when the document is not found", async () => {
-    mockRequireApiRole.mockResolvedValue({ ok: true, profile: { id: "u1", role: "member" } });
-    mockGetDocument.mockRejectedValue(new Error("not found"));
+  describe("signed URL generation", () => {
+    it("returns 200 with a signed URL on success", async () => {
+      requireApiRole.mockResolvedValueOnce({ ok: true, profile: { id: "u1", role: "member" } });
+      getDocument.mockResolvedValueOnce({ id: "doc-1", storage_path: "contracts/nda.pdf" });
+      createSignedDownloadUrl.mockResolvedValueOnce("https://cdn.example.com/signed/nda.pdf");
 
-    const res = await GET(makeRequest("missing"), { params: Promise.resolve({ id: "missing" }) });
+      const { req, params } = makeRequest("doc-1");
+      const res = await GET(req, { params });
 
-    expect(res.status).toBe(404);
-    await expect(json(res)).resolves.toEqual({ error: "Document not found" });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toEqual({ url: "https://cdn.example.com/signed/nda.pdf" });
+    });
+
+    it("passes the document storage_path to createSignedDownloadUrl", async () => {
+      requireApiRole.mockResolvedValueOnce({ ok: true, profile: { id: "u1", role: "admin" } });
+      getDocument.mockResolvedValueOnce({ id: "doc-5", storage_path: "invoices/invoice-001.pdf" });
+      createSignedDownloadUrl.mockResolvedValueOnce("https://signed.url");
+
+      const { req, params } = makeRequest("doc-5");
+      await GET(req, { params });
+
+      expect(createSignedDownloadUrl).toHaveBeenCalledWith(supabase, "invoices/invoice-001.pdf");
+    });
+
+    it("uses the supabase client from createClient for all operations", async () => {
+      requireApiRole.mockResolvedValueOnce({ ok: true, profile: { id: "u1", role: "admin" } });
+      getDocument.mockResolvedValueOnce({ id: "doc-7", storage_path: "path/file.pdf" });
+      createSignedDownloadUrl.mockResolvedValueOnce("https://signed.url");
+
+      const { req, params } = makeRequest("doc-7");
+      await GET(req, { params });
+
+      expect(mockCreateClient).toHaveBeenCalledTimes(1);
+    });
   });
 
-  it("returns the signed URL for an authorised request", async () => {
-    mockRequireApiRole.mockResolvedValue({ ok: true, profile: { id: "u1", role: "admin" } });
-    mockGetDocument.mockResolvedValue({ id: "doc-3", storage_path: "general/contract.pdf" });
-    mockCreateSignedDownloadUrl.mockResolvedValue("https://storage.example.com/signed-url");
+  describe("edge cases", () => {
+    it("returns 404 even when getDocument throws a non-Error rejection", async () => {
+      requireApiRole.mockResolvedValueOnce({ ok: true, profile: { id: "u1", role: "admin" } });
+      getDocument.mockRejectedValueOnce("string error");
 
-    const res = await GET(makeRequest("doc-3"), { params: Promise.resolve({ id: "doc-3" }) });
+      const { req, params } = makeRequest("bad-id");
+      const res = await GET(req, { params });
 
-    expect(res.status).toBe(200);
-    await expect(json(res)).resolves.toEqual({ url: "https://storage.example.com/signed-url" });
-  });
-
-  it("calls requireApiRole with ALL_ROLES so any active role is allowed to download", async () => {
-    mockRequireApiRole.mockResolvedValue({ ok: true, profile: { id: "u1", role: "member" } });
-    mockGetDocument.mockResolvedValue({ id: "doc-4", storage_path: "general/file.pdf" });
-    mockCreateSignedDownloadUrl.mockResolvedValue("https://example.com/url");
-
-    await GET(makeRequest("doc-4"), { params: Promise.resolve({ id: "doc-4" }) });
-
-    expect(mockRequireApiRole).toHaveBeenCalledWith(stubSupabase, ["admin", "manager", "member"]);
-  });
-
-  it("passes the document storage_path to createSignedDownloadUrl", async () => {
-    const storagePath = "contacts/abc-123/invoice-2024.pdf";
-    mockRequireApiRole.mockResolvedValue({ ok: true, profile: { id: "u1", role: "admin" } });
-    mockGetDocument.mockResolvedValue({ id: "doc-5", storage_path: storagePath });
-    mockCreateSignedDownloadUrl.mockResolvedValue("https://example.com/url");
-
-    await GET(makeRequest("doc-5"), { params: Promise.resolve({ id: "doc-5" }) });
-
-    expect(mockCreateSignedDownloadUrl).toHaveBeenCalledWith(stubSupabase, storagePath);
-  });
-
-  it("creates a supabase client for each request", async () => {
-    mockRequireApiRole.mockResolvedValue({ ok: false, status: 401 });
-
-    await GET(makeRequest("doc-6"), { params: Promise.resolve({ id: "doc-6" }) });
-
-    expect(mockCreateClient).toHaveBeenCalledTimes(1);
+      expect(res.status).toBe(404);
+      const body = await res.json();
+      expect(body).toEqual({ error: "Document not found" });
+    });
   });
 });

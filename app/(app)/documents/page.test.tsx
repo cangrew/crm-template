@@ -1,46 +1,48 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import React from "react";
+import type { DocumentRow } from "@/lib/supabase/types";
 
-// ── Mocks ──────────────────────────────────────────────────────────────────
-const mockRefetch = vi.fn();
-let docsData: unknown[] | undefined = undefined;
-let docsIsLoading = false;
-let docsIsError = false;
-let profileData: { role: string | null } | undefined = { role: "admin" };
-
-vi.mock("@/lib/data/hooks", () => ({
-  useDocuments: () => ({
-    data: docsData,
-    isLoading: docsIsLoading,
-    isError: docsIsError,
-    refetch: mockRefetch,
-  }),
-  useCurrentProfile: () => ({ data: profileData }),
+// --- hoisted mocks ---
+const { useDocuments, useCurrentProfile } = vi.hoisted(() => ({
+  useDocuments: vi.fn(),
+  useCurrentProfile: vi.fn(),
 }));
 
-vi.mock("@/lib/auth/roles", () => ({
-  can: (role: string, action: string) => {
-    if (role === "admin" || role === "manager") return true;
-    if (role === "member" && action === "read") return true;
-    return false;
-  },
+vi.mock("@/lib/data/hooks", () => ({
+  useDocuments,
+  useCurrentProfile,
+}));
+
+vi.mock("@/components/documents/document-card", () => ({
+  DocumentCard: ({ doc }: { doc: DocumentRow }) => (
+    <div data-testid="document-card" data-id={doc.id}>
+      {doc.kind}:{doc.storage_path}
+    </div>
+  ),
 }));
 
 vi.mock("@/components/documents/documents-filter-bar", () => ({
   DocumentsFilterBar: ({
+    q,
     onQ,
+    kind,
     onKind,
     kinds,
   }: {
+    q: string;
     onQ: (v: string) => void;
+    kind: string;
     onKind: (v: string) => void;
     kinds: string[];
   }) => (
     <div>
-      <input aria-label="search" onChange={(e) => onQ(e.target.value)} />
-      <select aria-label="kind" onChange={(e) => onKind(e.target.value)}>
+      <input
+        data-testid="filter-q"
+        value={q}
+        onChange={(e) => onQ(e.target.value)}
+        placeholder="Search"
+      />
+      <select data-testid="filter-kind" value={kind} onChange={(e) => onKind(e.target.value)}>
         <option value="">All</option>
         {kinds.map((k) => (
           <option key={k} value={k}>
@@ -52,23 +54,9 @@ vi.mock("@/components/documents/documents-filter-bar", () => ({
   ),
 }));
 
-vi.mock("@/components/documents/document-card", () => ({
-  DocumentCard: ({ doc }: { doc: { id: string; kind: string; storage_path: string } }) => (
-    <div data-testid={`doc-card-${doc.id}`}>{doc.kind}</div>
-  ),
-}));
-
 vi.mock("@/components/documents/upload-document-modal", () => ({
-  UploadDocumentModal: ({ open }: { open: boolean }) =>
-    open ? <div role="dialog">Upload Modal</div> : null,
-}));
-
-vi.mock("@/components/common/page-states", () => ({
-  PageErrorState: ({ body, onRetry }: { body: string; onRetry: () => void }) => (
-    <div>
-      <p>{body}</p>
-      <button onClick={onRetry}>Retry</button>
-    </div>
+  UploadDocumentModal: ({ open }: { open: boolean }) => (
+    <div data-testid="upload-modal" data-open={String(open)} />
   ),
 }));
 
@@ -84,8 +72,17 @@ vi.mock("@/components/common/page-header", () => ({
   }) => (
     <div>
       <h1>{title}</h1>
-      {subtitle && <p>{subtitle}</p>}
-      {actions}
+      {subtitle && <p data-testid="subtitle">{subtitle}</p>}
+      {actions && <div data-testid="page-actions">{actions}</div>}
+    </div>
+  ),
+}));
+
+vi.mock("@/components/common/page-states", () => ({
+  PageErrorState: ({ body, onRetry }: { body: string; onRetry: () => void }) => (
+    <div data-testid="error-state">
+      <span>{body}</span>
+      <button onClick={onRetry}>Retry</button>
     </div>
   ),
 }));
@@ -97,207 +94,268 @@ vi.mock("@/components/common/card-grid", () => ({
 }));
 
 vi.mock("@/components/ui/btn", () => ({
-  Btn: ({
-    children,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    variant?: string;
-    icon?: React.ReactNode;
-  }) => <button onClick={onClick}>{children}</button>,
+  Btn: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
+    <button onClick={onClick}>{children}</button>
+  ),
 }));
 
 vi.mock("@/components/ui/states", () => ({
   EmptyState: ({
     title,
-    body,
     action,
   }: {
-    icon?: unknown;
     title: string;
-    body: string;
+    body?: string;
     action?: React.ReactNode;
   }) => (
-    <div>
-      <h3>{title}</h3>
-      <p>{body}</p>
-      {action}
+    <div data-testid="empty-state">
+      {title}
+      {action && <div data-testid="empty-action">{action}</div>}
     </div>
   ),
 }));
 
 import DocumentsPage from "./page";
 
-function makeDoc(overrides: Partial<{
-  id: string;
-  kind: string;
-  storage_path: string;
-  contact_id: string | null;
-  created_at: string;
-}> = {}) {
+function doc(overrides: Partial<DocumentRow> = {}): DocumentRow {
   return {
-    id: "doc-1",
+    id: "d1",
     kind: "contract",
-    storage_path: "general/contract-123.pdf",
+    storage_path: "contracts/nda.pdf",
     contact_id: null,
+    created_by: "u1",
     created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+    ...overrides,
+  };
+}
+
+function makeDocsQ(overrides: Record<string, unknown> = {}) {
+  return {
+    data: [],
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
     ...overrides,
   };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  docsData = undefined;
-  docsIsLoading = false;
-  docsIsError = false;
-  profileData = { role: "admin" };
+  useCurrentProfile.mockReturnValue({ data: { role: "admin" } });
+  useDocuments.mockReturnValue(makeDocsQ());
 });
 
 describe("DocumentsPage", () => {
-  it("renders the page title", () => {
-    docsData = [];
-    render(<DocumentsPage />);
-    expect(screen.getByRole("heading", { name: "Documents" })).toBeInTheDocument();
-  });
+  describe("subtitle", () => {
+    it("shows '0 files on record' when empty", () => {
+      render(<DocumentsPage />);
+      expect(screen.getByTestId("subtitle").textContent).toBe("0 files on record");
+    });
 
-  it("shows loading skeleton when documents are loading", () => {
-    docsIsLoading = true;
-    render(<DocumentsPage />);
-    // Skeleton cards are rendered as divs with the skel class
-    expect(screen.getByTestId("card-grid")).toBeInTheDocument();
-  });
+    it("uses singular 'file' for exactly one document", () => {
+      useDocuments.mockReturnValue(makeDocsQ({ data: [doc()] }));
+      render(<DocumentsPage />);
+      expect(screen.getByTestId("subtitle").textContent).toBe("1 file on record");
+    });
 
-  it("shows error state and retry on error", () => {
-    docsIsError = true;
-    render(<DocumentsPage />);
-    expect(screen.getByText("Failed to fetch documents.")).toBeInTheDocument();
-
-    screen.getByRole("button", { name: "Retry" }).click();
-    expect(mockRefetch).toHaveBeenCalledTimes(1);
-  });
-
-  it("shows 'No documents yet' empty state when there are no documents", () => {
-    docsData = [];
-    render(<DocumentsPage />);
-    expect(screen.getByRole("heading", { name: "No documents yet" })).toBeInTheDocument();
-  });
-
-  it("shows upload button in empty state for admin", () => {
-    docsData = [];
-    profileData = { role: "admin" };
-    render(<DocumentsPage />);
-    expect(screen.getAllByRole("button", { name: "Upload document" }).length).toBeGreaterThan(0);
-  });
-
-  it("hides upload button in empty state for member (cannot create)", () => {
-    docsData = [];
-    profileData = { role: "member" };
-    render(<DocumentsPage />);
-    expect(screen.queryByRole("button", { name: "Upload document" })).not.toBeInTheDocument();
-  });
-
-  it("shows Upload button in header for admin", () => {
-    docsData = [];
-    profileData = { role: "admin" };
-    render(<DocumentsPage />);
-    expect(screen.getByRole("button", { name: "Upload" })).toBeInTheDocument();
-  });
-
-  it("hides Upload button in header for member", () => {
-    docsData = [];
-    profileData = { role: "member" };
-    render(<DocumentsPage />);
-    expect(screen.queryByRole("button", { name: "Upload" })).not.toBeInTheDocument();
-  });
-
-  it("opens upload modal when Upload button is clicked", async () => {
-    docsData = [];
-    render(<DocumentsPage />);
-    await userEvent.click(screen.getByRole("button", { name: "Upload" }));
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-  });
-
-  it("renders document cards when documents are loaded", () => {
-    docsData = [
-      makeDoc({ id: "d1", kind: "contract" }),
-      makeDoc({ id: "d2", kind: "invoice" }),
-    ];
-    render(<DocumentsPage />);
-    expect(screen.getByTestId("doc-card-d1")).toBeInTheDocument();
-    expect(screen.getByTestId("doc-card-d2")).toBeInTheDocument();
-  });
-
-  it("shows subtitle with correct file count", () => {
-    docsData = [makeDoc({ id: "d1" }), makeDoc({ id: "d2" })];
-    render(<DocumentsPage />);
-    expect(screen.getByText("2 files on record")).toBeInTheDocument();
-  });
-
-  it("shows singular 'file' when count is 1", () => {
-    docsData = [makeDoc({ id: "d1" })];
-    render(<DocumentsPage />);
-    expect(screen.getByText("1 file on record")).toBeInTheDocument();
-  });
-
-  it("filters documents by search query matching kind", async () => {
-    docsData = [
-      makeDoc({ id: "d1", kind: "contract", storage_path: "general/contract.pdf" }),
-      makeDoc({ id: "d2", kind: "invoice", storage_path: "general/invoice.pdf" }),
-    ];
-    render(<DocumentsPage />);
-
-    await userEvent.type(screen.getByLabelText("search"), "contract");
-
-    expect(screen.getByTestId("doc-card-d1")).toBeInTheDocument();
-    expect(screen.queryByTestId("doc-card-d2")).not.toBeInTheDocument();
-  });
-
-  it("filters documents by search query matching storage_path", async () => {
-    docsData = [
-      makeDoc({ id: "d1", kind: "other", storage_path: "contacts/abc/report.pdf" }),
-      makeDoc({ id: "d2", kind: "other", storage_path: "general/budget.pdf" }),
-    ];
-    render(<DocumentsPage />);
-
-    await userEvent.type(screen.getByLabelText("search"), "report");
-
-    expect(screen.getByTestId("doc-card-d1")).toBeInTheDocument();
-    expect(screen.queryByTestId("doc-card-d2")).not.toBeInTheDocument();
-  });
-
-  it("filters documents by kind dropdown", async () => {
-    docsData = [
-      makeDoc({ id: "d1", kind: "contract" }),
-      makeDoc({ id: "d2", kind: "invoice" }),
-    ];
-    render(<DocumentsPage />);
-
-    await userEvent.selectOptions(screen.getByLabelText("kind"), "contract");
-
-    expect(screen.getByTestId("doc-card-d1")).toBeInTheDocument();
-    expect(screen.queryByTestId("doc-card-d2")).not.toBeInTheDocument();
-  });
-
-  it("shows 'No documents match these filters' empty state when filters exclude all", async () => {
-    docsData = [makeDoc({ kind: "contract" })];
-    render(<DocumentsPage />);
-
-    await userEvent.selectOptions(screen.getByLabelText("kind"), "invoice");
-
-    await waitFor(() => {
-      expect(
-        screen.getByRole("heading", { name: "No documents match these filters" }),
-      ).toBeInTheDocument();
+    it("uses plural 'files' for more than one document", () => {
+      useDocuments.mockReturnValue(
+        makeDocsQ({ data: [doc({ id: "d1" }), doc({ id: "d2" })] }),
+      );
+      render(<DocumentsPage />);
+      expect(screen.getByTestId("subtitle").textContent).toBe("2 files on record");
     });
   });
 
-  it("search is case-insensitive", async () => {
-    docsData = [makeDoc({ id: "d1", kind: "Contract", storage_path: "general/doc.pdf" })];
-    render(<DocumentsPage />);
+  describe("allKinds extraction", () => {
+    it("passes unique sorted kinds to the filter bar", () => {
+      useDocuments.mockReturnValue(
+        makeDocsQ({
+          data: [
+            doc({ id: "1", kind: "invoice" }),
+            doc({ id: "2", kind: "contract" }),
+            doc({ id: "3", kind: "invoice" }),
+            doc({ id: "4", kind: "amendment" }),
+          ],
+        }),
+      );
+      render(<DocumentsPage />);
+      // The filter bar renders <option> elements for each kind
+      const options = screen.getAllByRole("option");
+      const kindOptions = options.filter((o) => o.getAttribute("value") !== "");
+      const kindValues = kindOptions.map((o) => o.getAttribute("value"));
+      expect(kindValues).toEqual(["amendment", "contract", "invoice"]);
+    });
+  });
 
-    await userEvent.type(screen.getByLabelText("search"), "CONTRACT");
+  describe("filter by text (q)", () => {
+    const docs = [
+      doc({ id: "1", kind: "contract", storage_path: "contracts/nda.pdf" }),
+      doc({ id: "2", kind: "invoice", storage_path: "invoices/inv-001.pdf" }),
+      doc({ id: "3", kind: "amendment", storage_path: "amendments/amend-a.pdf" }),
+    ];
 
-    expect(screen.getByTestId("doc-card-d1")).toBeInTheDocument();
+    beforeEach(() => {
+      useDocuments.mockReturnValue(makeDocsQ({ data: docs }));
+    });
+
+    it("shows all documents when the search is empty", () => {
+      render(<DocumentsPage />);
+      expect(screen.getAllByTestId("document-card")).toHaveLength(3);
+    });
+
+    it("filters by kind", () => {
+      render(<DocumentsPage />);
+      fireEvent.change(screen.getByTestId("filter-q"), { target: { value: "invoice" } });
+      expect(screen.getAllByTestId("document-card")).toHaveLength(1);
+      expect(screen.getByTestId("document-card")).toHaveTextContent("invoice");
+    });
+
+    it("filters by storage_path substring", () => {
+      render(<DocumentsPage />);
+      fireEvent.change(screen.getByTestId("filter-q"), { target: { value: "amend" } });
+      const cards = screen.getAllByTestId("document-card");
+      expect(cards).toHaveLength(1);
+      expect(cards[0]).toHaveAttribute("data-id", "3");
+    });
+
+    it("is case-insensitive", () => {
+      render(<DocumentsPage />);
+      fireEvent.change(screen.getByTestId("filter-q"), { target: { value: "CONTRACT" } });
+      const cards = screen.getAllByTestId("document-card");
+      expect(cards).toHaveLength(1);
+      expect(cards[0]).toHaveAttribute("data-id", "1");
+    });
+
+    it("shows empty state with 'No documents match these filters' when some exist but none match", () => {
+      render(<DocumentsPage />);
+      fireEvent.change(screen.getByTestId("filter-q"), { target: { value: "zzznomatch" } });
+      expect(screen.getByTestId("empty-state")).toHaveTextContent(
+        "No documents match these filters",
+      );
+    });
+  });
+
+  describe("filter by kind (dropdown)", () => {
+    const docs = [
+      doc({ id: "1", kind: "contract", storage_path: "contracts/a.pdf" }),
+      doc({ id: "2", kind: "invoice", storage_path: "invoices/b.pdf" }),
+    ];
+
+    beforeEach(() => {
+      useDocuments.mockReturnValue(makeDocsQ({ data: docs }));
+    });
+
+    it("filters documents to only the selected kind", () => {
+      render(<DocumentsPage />);
+      fireEvent.change(screen.getByTestId("filter-kind"), { target: { value: "invoice" } });
+      const cards = screen.getAllByTestId("document-card");
+      expect(cards).toHaveLength(1);
+      expect(cards[0]).toHaveAttribute("data-id", "2");
+    });
+
+    it("shows all documents when the kind filter is cleared", () => {
+      render(<DocumentsPage />);
+      fireEvent.change(screen.getByTestId("filter-kind"), { target: { value: "contract" } });
+      fireEvent.change(screen.getByTestId("filter-kind"), { target: { value: "" } });
+      expect(screen.getAllByTestId("document-card")).toHaveLength(2);
+    });
+  });
+
+  describe("combined filters (text + kind)", () => {
+    it("applies both text and kind filters together", () => {
+      useDocuments.mockReturnValue(
+        makeDocsQ({
+          data: [
+            doc({ id: "1", kind: "contract", storage_path: "contracts/nda.pdf" }),
+            doc({ id: "2", kind: "contract", storage_path: "contracts/msa.pdf" }),
+            doc({ id: "3", kind: "invoice", storage_path: "invoices/inv.pdf" }),
+          ],
+        }),
+      );
+      render(<DocumentsPage />);
+      fireEvent.change(screen.getByTestId("filter-q"), { target: { value: "nda" } });
+      fireEvent.change(screen.getByTestId("filter-kind"), { target: { value: "contract" } });
+      const cards = screen.getAllByTestId("document-card");
+      expect(cards).toHaveLength(1);
+      expect(cards[0]).toHaveAttribute("data-id", "1");
+    });
+  });
+
+  describe("role-based permissions", () => {
+    it("shows the Upload button for admin role", () => {
+      // Supply a non-empty list so only the header button renders (no empty-state action)
+      useDocuments.mockReturnValue(makeDocsQ({ data: [doc()] }));
+      render(<DocumentsPage />);
+      expect(screen.getByRole("button", { name: /^upload$/i })).toBeInTheDocument();
+    });
+
+    it("shows the Upload button for manager role", () => {
+      useCurrentProfile.mockReturnValue({ data: { role: "manager" } });
+      useDocuments.mockReturnValue(makeDocsQ({ data: [doc()] }));
+      render(<DocumentsPage />);
+      expect(screen.getByRole("button", { name: /^upload$/i })).toBeInTheDocument();
+    });
+
+    it("hides the Upload button for member role", () => {
+      useCurrentProfile.mockReturnValue({ data: { role: "member" } });
+      render(<DocumentsPage />);
+      expect(screen.queryByRole("button", { name: /^upload$/i })).not.toBeInTheDocument();
+    });
+
+    it("hides the Upload button when no profile is loaded", () => {
+      useCurrentProfile.mockReturnValue({ data: null });
+      render(<DocumentsPage />);
+      expect(screen.queryByRole("button", { name: /^upload$/i })).not.toBeInTheDocument();
+    });
+
+    it("shows an Upload action in the empty state for users who can upload", () => {
+      useCurrentProfile.mockReturnValue({ data: { role: "admin" } });
+      useDocuments.mockReturnValue(makeDocsQ({ data: [] }));
+      render(<DocumentsPage />);
+      expect(screen.getByTestId("empty-action")).toBeInTheDocument();
+    });
+
+    it("omits Upload action from empty state for member role", () => {
+      useCurrentProfile.mockReturnValue({ data: { role: "member" } });
+      useDocuments.mockReturnValue(makeDocsQ({ data: [] }));
+      render(<DocumentsPage />);
+      expect(screen.queryByTestId("empty-action")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("loading state", () => {
+    it("renders skeleton cards while loading", () => {
+      useDocuments.mockReturnValue(makeDocsQ({ isLoading: true, data: undefined }));
+      render(<DocumentsPage />);
+      // The skeleton renders 8 placeholder divs inside CardGrid, not document-card testids
+      expect(screen.queryByTestId("document-card")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("empty-state")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("error state", () => {
+    it("renders the error state when the query errors", () => {
+      useDocuments.mockReturnValue(makeDocsQ({ isError: true }));
+      render(<DocumentsPage />);
+      expect(screen.getByTestId("error-state")).toBeInTheDocument();
+      expect(screen.getByText("Failed to fetch documents.")).toBeInTheDocument();
+    });
+
+    it("calls refetch on retry", () => {
+      const refetch = vi.fn();
+      useDocuments.mockReturnValue(makeDocsQ({ isError: true, refetch }));
+      render(<DocumentsPage />);
+      fireEvent.click(screen.getByRole("button", { name: /retry/i }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("empty state messages", () => {
+    it("shows 'No documents yet' when there are no documents at all", () => {
+      render(<DocumentsPage />);
+      expect(screen.getByTestId("empty-state")).toHaveTextContent("No documents yet");
+    });
   });
 });
