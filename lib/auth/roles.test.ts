@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { can, isAdmin, isStaff } from "./roles";
 
 describe("can() permission matrix", () => {
-  it("grants admins full CRUD on every resource", () => {
+  it("grants admins full CRUD on every resource except the append-only ledger", () => {
     for (const resource of [
       "clients",
       "documents",
@@ -11,11 +11,17 @@ describe("can() permission matrix", () => {
       "agencies",
       "carriers",
       "policies",
+      "statements",
+      "payouts",
     ] as const) {
       for (const action of ["create", "read", "update", "delete"] as const) {
         expect(can("admin", action, resource)).toBe(true);
       }
     }
+    // The ledger is append-only for everyone; corrections are reversal RPCs.
+    expect(can("admin", "read", "ledger")).toBe(true);
+    expect(can("admin", "update", "ledger")).toBe(false);
+    expect(can("admin", "delete", "ledger")).toBe(false);
   });
 
   it("lets managers run records but not delete them or manage users", () => {
@@ -35,6 +41,12 @@ describe("can() permission matrix", () => {
     expect(can("manager", "create", "policies")).toBe(true);
     expect(can("manager", "update", "policies")).toBe(true);
     expect(can("manager", "delete", "policies")).toBe(false);
+    expect(can("manager", "create", "statements")).toBe(true);
+    expect(can("manager", "delete", "statements")).toBe(false);
+    expect(can("manager", "read", "ledger")).toBe(true);
+    expect(can("manager", "update", "ledger")).toBe(false);
+    expect(can("manager", "create", "payouts")).toBe(true);
+    expect(can("manager", "delete", "payouts")).toBe(false);
     expect(can("manager", "read", "users")).toBe(false);
     expect(can("manager", "update", "users")).toBe(false);
   });
@@ -46,6 +58,9 @@ describe("can() permission matrix", () => {
     expect(can("agent", "read", "policies")).toBe(true);
     expect(can("agent", "read", "agencies")).toBe(false);
     expect(can("agent", "read", "carriers")).toBe(false);
+    expect(can("agent", "read", "statements")).toBe(false);
+    expect(can("agent", "read", "ledger")).toBe(true);
+    expect(can("agent", "read", "payouts")).toBe(true);
     for (const resource of [
       "clients",
       "documents",
@@ -54,6 +69,9 @@ describe("can() permission matrix", () => {
       "agencies",
       "carriers",
       "policies",
+      "statements",
+      "ledger",
+      "payouts",
     ] as const) {
       for (const action of ["create", "update", "delete"] as const) {
         expect(can("agent", action, resource)).toBe(false);
@@ -69,6 +87,9 @@ describe("can() permission matrix", () => {
     expect(can("agency_owner", "read", "agencies")).toBe(true);
     expect(can("agency_owner", "read", "policies")).toBe(true);
     expect(can("agency_owner", "read", "carriers")).toBe(false);
+    expect(can("agency_owner", "read", "statements")).toBe(false);
+    expect(can("agency_owner", "read", "ledger")).toBe(true);
+    expect(can("agency_owner", "read", "payouts")).toBe(true);
     for (const resource of [
       "clients",
       "documents",
@@ -77,6 +98,9 @@ describe("can() permission matrix", () => {
       "agencies",
       "carriers",
       "policies",
+      "statements",
+      "ledger",
+      "payouts",
     ] as const) {
       for (const action of ["create", "update", "delete"] as const) {
         expect(can("agency_owner", action, resource)).toBe(false);

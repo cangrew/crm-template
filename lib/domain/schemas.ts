@@ -6,6 +6,9 @@ import {
   BUSINESS_TYPES,
   CARRIER_STATUSES,
   CLIENT_STATUSES,
+  LINE_KINDS,
+  MATCH_STATUSES,
+  PAYEE_TYPES,
   POLICY_STATUSES,
   RATE_TYPES,
   type RateType,
@@ -251,6 +254,91 @@ export const policyUpdateSchema = z
   })
   .partial();
 
+/* commission statements — one uploaded carrier CSV per (carrier, period).
+ * status / rollup columns are server-managed (post_statement), so inserts
+ * carry only the import metadata. */
+export const statementInsertSchema = z.object({
+  carrier_id: uuid,
+  /* First day of the commission month the statement covers. */
+  period_month: z.iso.date(),
+  /* Raw CSV audit copy; null until uploaded. */
+  storage_path: z.string().trim().nullable().optional(),
+  uploaded_by: uuid.optional(),
+});
+
+/* statement lines — parsed CSV rows. amount_cents is signed (negative =
+ * chargeback); the parsed identity fields are nullable because carrier files
+ * are messy. `raw` keeps the original row verbatim for audit. */
+export const statementLineInsertSchema = z.object({
+  statement_id: uuid,
+  row_index: z.number().int().min(0),
+  raw: z.record(z.string(), z.string()),
+  policy_number: z.string().trim().nullable().optional(),
+  carrier_member_id: z.string().trim().nullable().optional(),
+  subscriber_name: z.string().trim().nullable().optional(),
+  subscriber_dob: z.iso.date().nullable().optional(),
+  member_count: z.number().int().nullable().optional(),
+  premium_cents: z.number().int().nullable().optional(),
+  amount_cents: z.number().int(),
+  line_kind: z.enum(LINE_KINDS).default("commission"),
+  business_type: z.enum(BUSINESS_TYPES).nullable().optional(),
+  match_status: z.enum(MATCH_STATUSES).default("unmatched"),
+  matched_policy_id: uuid.nullable().optional(),
+  match_reason: z.string().trim().nullable().optional(),
+});
+
+/* payout statements — exactly one payee id matching payee_type must be set
+ * (mirrors the payout_statements_payee_shape SQL check). The house never
+ * receives a payout statement; it keeps the remainder. */
+export const payoutStatementInsertSchema = z
+  .object({
+    payee_type: z.enum(PAYEE_TYPES),
+    agent_id: uuid.nullable().optional(),
+    agency_id: uuid.nullable().optional(),
+    period_month: z.iso.date(),
+  })
+  .superRefine((val, ctx) => {
+    if (val.payee_type === "house") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["payee_type"],
+        message: "The house keeps its remainder; it never receives a payout statement.",
+      });
+      return;
+    }
+    if (val.payee_type === "agent") {
+      if (val.agent_id == null) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["agent_id"],
+          message: "An agent payout statement needs an agent.",
+        });
+      }
+      if (val.agency_id != null) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["agency_id"],
+          message: "An agent payout statement cannot carry an agency.",
+        });
+      }
+      return;
+    }
+    if (val.agency_id == null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["agency_id"],
+        message: "An agency payout statement needs an agency.",
+      });
+    }
+    if (val.agent_id != null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["agent_id"],
+        message: "An agency payout statement cannot carry an agent.",
+      });
+    }
+  });
+
 /* documents */
 export const documentInsertSchema = z.object({
   // Documents can stand alone or attach to a client record.
@@ -276,4 +364,7 @@ export type CsvMappingInput = z.infer<typeof csvMappingInsertSchema>;
 export type CsvMappingUpdate = z.infer<typeof csvMappingUpdateSchema>;
 export type PolicyInput = z.infer<typeof policyInsertSchema>;
 export type PolicyUpdate = z.infer<typeof policyUpdateSchema>;
+export type StatementInput = z.infer<typeof statementInsertSchema>;
+export type StatementLineInput = z.infer<typeof statementLineInsertSchema>;
+export type PayoutStatementInput = z.infer<typeof payoutStatementInsertSchema>;
 export type DocumentInput = z.infer<typeof documentInsertSchema>;

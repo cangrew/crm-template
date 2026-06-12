@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   agencyInsertSchema,
+  payoutStatementInsertSchema,
+  statementInsertSchema,
+  statementLineInsertSchema,
   agencyUpdateSchema,
   agentInsertSchema,
   agentUpdateSchema,
@@ -431,5 +434,102 @@ describe("documentInsertSchema", () => {
 
   it("rejects an empty storage path", () => {
     expect(documentInsertSchema.safeParse({ kind: "other", storage_path: "" }).success).toBe(false);
+  });
+});
+
+describe("statementInsertSchema", () => {
+  it("accepts a minimal statement", () => {
+    const result = statementInsertSchema.parse({
+      carrier_id: "5c0e8c1e-95a1-4f44-9d0a-7d3a44d2b1aa",
+      period_month: "2026-05-01",
+    });
+    expect(result.storage_path).toBeUndefined();
+  });
+
+  it("rejects a malformed period month", () => {
+    expect(
+      statementInsertSchema.safeParse({
+        carrier_id: "5c0e8c1e-95a1-4f44-9d0a-7d3a44d2b1aa",
+        period_month: "May 2026",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("statementLineInsertSchema", () => {
+  const base = {
+    statement_id: "5c0e8c1e-95a1-4f44-9d0a-7d3a44d2b1aa",
+    row_index: 0,
+    raw: { "Policy ID": "AMB-001" },
+    amount_cents: 2200,
+  };
+
+  it("applies staging defaults", () => {
+    const result = statementLineInsertSchema.parse(base);
+    expect(result.line_kind).toBe("commission");
+    expect(result.match_status).toBe("unmatched");
+  });
+
+  it("accepts a negative (chargeback) amount", () => {
+    expect(statementLineInsertSchema.parse({ ...base, amount_cents: -8600 }).amount_cents).toBe(
+      -8600,
+    );
+  });
+
+  it("rejects a fractional amount", () => {
+    expect(statementLineInsertSchema.safeParse({ ...base, amount_cents: 21.5 }).success).toBe(
+      false,
+    );
+  });
+});
+
+describe("payoutStatementInsertSchema", () => {
+  const AGENT_ID = "5c0e8c1e-95a1-4f44-9d0a-7d3a44d2b1aa";
+  const AGENCY_ID = "6d1f9d2f-a6b2-4055-ae1b-8e4b55e3c2bb";
+
+  it("accepts a well-shaped agent payout", () => {
+    const result = payoutStatementInsertSchema.parse({
+      payee_type: "agent",
+      agent_id: AGENT_ID,
+      period_month: "2026-05-01",
+    });
+    expect(result.agent_id).toBe(AGENT_ID);
+  });
+
+  it("accepts a well-shaped agency payout", () => {
+    expect(
+      payoutStatementInsertSchema.safeParse({
+        payee_type: "agency",
+        agency_id: AGENCY_ID,
+        period_month: "2026-05-01",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a house payout (the house keeps its remainder)", () => {
+    expect(
+      payoutStatementInsertSchema.safeParse({
+        payee_type: "house",
+        period_month: "2026-05-01",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects mismatched payee ids", () => {
+    expect(
+      payoutStatementInsertSchema.safeParse({
+        payee_type: "agent",
+        agency_id: AGENCY_ID,
+        period_month: "2026-05-01",
+      }).success,
+    ).toBe(false);
+    expect(
+      payoutStatementInsertSchema.safeParse({
+        payee_type: "agency",
+        agent_id: AGENT_ID,
+        agency_id: AGENCY_ID,
+        period_month: "2026-05-01",
+      }).success,
+    ).toBe(false);
   });
 });

@@ -93,3 +93,74 @@ export const POLICY_STATUS_LABELS: Record<PolicyStatus, string> = {
   terminated: "Terminated",
   renewed: "Renewed",
 };
+
+/* commission statements — import lifecycle (public.statement_status) */
+export const STATEMENT_STATUSES = ["draft", "matching", "posted", "void"] as const;
+export type StatementStatus = (typeof STATEMENT_STATUSES)[number];
+
+export const STATEMENT_STATUS_LABELS: Record<StatementStatus, string> = {
+  draft: "Draft",
+  matching: "Matching",
+  posted: "Posted",
+  void: "Void",
+};
+
+/* statement lines — what kind of money the carrier row is (public.line_kind) */
+export const LINE_KINDS = ["commission", "override", "adjustment"] as const;
+export type LineKind = (typeof LINE_KINDS)[number];
+
+export const LINE_KIND_LABELS: Record<LineKind, string> = {
+  commission: "Commission",
+  override: "Override",
+  adjustment: "Adjustment",
+};
+
+/* statement lines — policy-matching resolution (public.match_status) */
+export const MATCH_STATUSES = ["unmatched", "auto_matched", "manual_matched", "ignored"] as const;
+export type MatchStatus = (typeof MATCH_STATUSES)[number];
+
+export const MATCH_STATUS_LABELS: Record<MatchStatus, string> = {
+  unmatched: "Unmatched",
+  auto_matched: "Auto-matched",
+  manual_matched: "Manually matched",
+  ignored: "Ignored",
+};
+
+/* ledger — who earns each allocated share (public.ledger_entry_kind, mirrors
+ * commission-engine.ts) */
+export const LEDGER_ENTRY_KINDS = [
+  "agent_commission",
+  "agency_commission",
+  "house_commission",
+  "agency_override",
+  "house_override",
+] as const;
+export type LedgerEntryKind = (typeof LEDGER_ENTRY_KINDS)[number];
+
+export const LEDGER_ENTRY_KIND_LABELS: Record<LedgerEntryKind, string> = {
+  agent_commission: "Agent commission",
+  agency_commission: "Agency commission",
+  house_commission: "House commission",
+  agency_override: "Agency override",
+  house_override: "House override",
+};
+
+/* ledger / payouts — the payee a ledger entry belongs to (public.payee_type) */
+export const PAYEE_TYPES = ["agent", "agency", "house"] as const;
+export type PayeeType = (typeof PAYEE_TYPES)[number];
+
+export const PAYEE_TYPE_LABELS: Record<PayeeType, string> = {
+  agent: "Agent",
+  agency: "Agency",
+  house: "House",
+};
+
+/* payout statements — payout run lifecycle (public.payout_status) */
+export const PAYOUT_STATUSES = ["open", "finalized", "paid"] as const;
+export type PayoutStatus = (typeof PAYOUT_STATUSES)[number];
+
+export const PAYOUT_STATUS_LABELS: Record<PayoutStatus, string> = {
+  open: "Open",
+  finalized: "Finalized",
+  paid: "Paid",
+};

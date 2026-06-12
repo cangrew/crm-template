@@ -7,7 +7,10 @@ export type Resource =
   | "agents"
   | "agencies"
   | "carriers"
-  | "policies";
+  | "policies"
+  | "statements"
+  | "ledger"
+  | "payouts";
 
 export type Action = "create" | "read" | "update" | "delete";
 
@@ -30,6 +33,11 @@ const PERMISSIONS: Record<AppRole, Record<Resource, readonly Action[]>> = {
     agencies: ALL,
     carriers: ALL,
     policies: ALL,
+    statements: ALL,
+    // The ledger is append-only for everyone; corrections go through the
+    // void/reversal RPCs, never row edits.
+    ledger: ["read"],
+    payouts: ALL,
   },
   manager: {
     clients: ["create", "read", "update"],
@@ -39,6 +47,9 @@ const PERMISSIONS: Record<AppRole, Record<Resource, readonly Action[]>> = {
     agencies: ["create", "read", "update"],
     carriers: ["create", "read", "update"],
     policies: ["create", "read", "update"],
+    statements: ["create", "read", "update"],
+    ledger: ["read"],
+    payouts: ["create", "read", "update"],
   },
   agent: {
     clients: ["read"],
@@ -50,6 +61,9 @@ const PERMISSIONS: Record<AppRole, Record<Resource, readonly Action[]>> = {
     // tenant-readable carriers list, not this matrix.
     carriers: [],
     policies: ["read"],
+    statements: [],
+    ledger: ["read"],
+    payouts: ["read"],
   },
   agency_owner: {
     clients: ["read"],
@@ -59,6 +73,9 @@ const PERMISSIONS: Record<AppRole, Record<Resource, readonly Action[]>> = {
     agencies: ["read"],
     carriers: [],
     policies: ["read"],
+    statements: [],
+    ledger: ["read"],
+    payouts: ["read"],
   },
 };
 

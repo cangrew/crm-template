@@ -6,6 +6,7 @@ import type {
   AgentStatus,
   CarrierStatus,
   ClientStatus,
+  PayoutStatus,
   PolicyStatus,
 } from "@/lib/domain/enums";
 import type { NotificationType } from "@/lib/domain/notifications";
@@ -21,15 +22,21 @@ import type {
   CsvMappingInput,
   CsvMappingUpdate,
   DocumentInput,
+  PayoutStatementInput,
   PolicyInput,
   PolicyUpdate,
   ProfileUpdate,
   RateScheduleInput,
   RateScheduleUpdate,
+  StatementInput,
+  StatementLineInput,
 } from "@/lib/domain/schemas";
 import { createClient } from "@/lib/supabase/client";
 import * as agenciesApi from "./agencies";
 import * as agentsApi from "./agents";
+import * as ledgerApi from "./ledger";
+import * as payoutsApi from "./payouts";
+import * as statementsApi from "./statements";
 import * as carriersApi from "./carriers";
 import * as clientsApi from "./clients";
 import * as csvMappingsApi from "./csv-mappings";
@@ -632,5 +639,206 @@ export function useSetNotificationPreference() {
       muted: boolean;
     }) => notificationPreferencesApi.setPreference(supabase, userId, type, muted),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.notificationPreferences.all }),
+  });
+}
+
+/* ----------------------------------------------------------- statements --- */
+export function useStatements() {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.statements.lists(),
+    queryFn: () => statementsApi.listStatements(supabase),
+  });
+}
+
+export function useStatement(id: string) {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.statements.detail(id),
+    queryFn: () => statementsApi.getStatement(supabase, id),
+    enabled: Boolean(id),
+  });
+}
+
+export function useStatementLines(statementId: string) {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.statements.lines(statementId),
+    queryFn: () => statementsApi.listStatementLines(supabase, statementId),
+    enabled: Boolean(statementId),
+  });
+}
+
+export function useCreateStatement() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: StatementInput) => statementsApi.createStatement(supabase, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.statements.all }),
+  });
+}
+
+export function useDeleteStatement() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => statementsApi.deleteStatement(supabase, id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.statements.all }),
+  });
+}
+
+export function useBulkInsertLines() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (lines: StatementLineInput[]) => statementsApi.bulkInsertLines(supabase, lines),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.statements.all }),
+  });
+}
+
+export function useSetLineMatch() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      lineId,
+      patch,
+    }: {
+      lineId: string;
+      patch: Parameters<typeof statementsApi.setLineMatch>[2];
+    }) => statementsApi.setLineMatch(supabase, lineId, patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.statements.all }),
+  });
+}
+
+/* Posting (and voiding) rewrites money downstream: statements, the ledger,
+ * and payout rollups all refresh together. */
+export function usePostStatement() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      statementId,
+      entries,
+    }: {
+      statementId: string;
+      entries: statementsApi.LedgerEntryWire[];
+    }) => statementsApi.postStatement(supabase, statementId, entries),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.statements.all });
+      qc.invalidateQueries({ queryKey: queryKeys.ledger.all });
+      qc.invalidateQueries({ queryKey: queryKeys.payouts.all });
+    },
+  });
+}
+
+export function useVoidStatement() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (statementId: string) => statementsApi.voidStatement(supabase, statementId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.statements.all });
+      qc.invalidateQueries({ queryKey: queryKeys.ledger.all });
+      qc.invalidateQueries({ queryKey: queryKeys.payouts.all });
+    },
+  });
+}
+
+/** Uploads the raw-CSV audit copy to the staff-only statements bucket. */
+export function useStatementUpload() {
+  const supabase = createClient();
+  return useMutation({
+    mutationFn: async ({ path, file }: { path: string; file: File }) => {
+      const { token } = await statementsApi.createStatementUploadUrl(supabase, path);
+      const { error } = await supabase.storage
+        .from(statementsApi.STATEMENTS_BUCKET)
+        .uploadToSignedUrl(path, token, file);
+      if (error) throw error;
+      return { path };
+    },
+  });
+}
+
+/* --------------------------------------------------------------- ledger --- */
+export function useLedgerByAgent(agentId: string) {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.ledger.byAgent(agentId),
+    queryFn: () => ledgerApi.listLedgerByAgent(supabase, agentId),
+    enabled: Boolean(agentId),
+  });
+}
+
+export function useLedgerByAgency(agencyId: string) {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.ledger.byAgency(agencyId),
+    queryFn: () => ledgerApi.listLedgerByAgency(supabase, agencyId),
+    enabled: Boolean(agencyId),
+  });
+}
+
+export function useLedgerByPolicy(policyId: string) {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.ledger.byPolicy(policyId),
+    queryFn: () => ledgerApi.listLedgerByPolicy(supabase, policyId),
+    enabled: Boolean(policyId),
+  });
+}
+
+export function useLedgerByPeriod(periodMonth: string) {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.ledger.byPeriod(periodMonth),
+    queryFn: () => ledgerApi.listLedgerByPeriod(supabase, periodMonth),
+    enabled: Boolean(periodMonth),
+  });
+}
+
+/* -------------------------------------------------------------- payouts --- */
+export function usePayoutStatements() {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.payouts.lists(),
+    queryFn: () => payoutsApi.listPayoutStatements(supabase),
+  });
+}
+
+export function useCreatePayoutStatement() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: PayoutStatementInput) => payoutsApi.createPayoutStatement(supabase, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.payouts.all });
+      qc.invalidateQueries({ queryKey: queryKeys.ledger.all });
+    },
+  });
+}
+
+export function useUpdatePayoutStatus() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: PayoutStatus }) =>
+      payoutsApi.updatePayoutStatus(supabase, id, status),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.payouts.all });
+      qc.invalidateQueries({ queryKey: queryKeys.ledger.all });
+    },
+  });
+}
+
+export function useDeletePayoutStatement() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => payoutsApi.deletePayoutStatement(supabase, id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.payouts.all });
+      qc.invalidateQueries({ queryKey: queryKeys.ledger.all });
+    },
   });
 }
