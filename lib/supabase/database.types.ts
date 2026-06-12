@@ -196,6 +196,60 @@ export type Database = {
         };
         Relationships: [];
       };
+      commission_statements: {
+        Row: {
+          carrier_id: string;
+          created_at: string;
+          id: string;
+          line_count: number;
+          period_month: string;
+          status: Database["public"]["Enums"]["statement_status"];
+          storage_path: string | null;
+          total_amount_cents: number;
+          updated_at: string;
+          uploaded_by: string | null;
+        };
+        Insert: {
+          carrier_id: string;
+          created_at?: string;
+          id?: string;
+          line_count?: number;
+          period_month: string;
+          status?: Database["public"]["Enums"]["statement_status"];
+          storage_path?: string | null;
+          total_amount_cents?: number;
+          updated_at?: string;
+          uploaded_by?: string | null;
+        };
+        Update: {
+          carrier_id?: string;
+          created_at?: string;
+          id?: string;
+          line_count?: number;
+          period_month?: string;
+          status?: Database["public"]["Enums"]["statement_status"];
+          storage_path?: string | null;
+          total_amount_cents?: number;
+          updated_at?: string;
+          uploaded_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "commission_statements_carrier_id_fkey";
+            columns: ["carrier_id"];
+            isOneToOne: false;
+            referencedRelation: "carriers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "commission_statements_uploaded_by_fkey";
+            columns: ["uploaded_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       clients: {
         Row: {
           address: string | null;
@@ -301,6 +355,87 @@ export type Database = {
           },
         ];
       };
+      ledger_entries: {
+        Row: {
+          agency_id: string | null;
+          agent_id: string | null;
+          amount_cents: number;
+          applied_bps: number | null;
+          created_at: string;
+          entry_kind: Database["public"]["Enums"]["ledger_entry_kind"];
+          id: string;
+          payee_type: Database["public"]["Enums"]["payee_type"];
+          payout_statement_id: string | null;
+          period_month: string;
+          policy_id: string;
+          statement_line_id: string;
+        };
+        Insert: {
+          agency_id?: string | null;
+          agent_id?: string | null;
+          amount_cents: number;
+          applied_bps?: number | null;
+          created_at?: string;
+          entry_kind: Database["public"]["Enums"]["ledger_entry_kind"];
+          id?: string;
+          payee_type: Database["public"]["Enums"]["payee_type"];
+          payout_statement_id?: string | null;
+          period_month: string;
+          policy_id: string;
+          statement_line_id: string;
+        };
+        Update: {
+          agency_id?: string | null;
+          agent_id?: string | null;
+          amount_cents?: number;
+          applied_bps?: number | null;
+          created_at?: string;
+          entry_kind?: Database["public"]["Enums"]["ledger_entry_kind"];
+          id?: string;
+          payee_type?: Database["public"]["Enums"]["payee_type"];
+          payout_statement_id?: string | null;
+          period_month?: string;
+          policy_id?: string;
+          statement_line_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ledger_entries_agency_id_fkey";
+            columns: ["agency_id"];
+            isOneToOne: false;
+            referencedRelation: "agencies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ledger_entries_agent_id_fkey";
+            columns: ["agent_id"];
+            isOneToOne: false;
+            referencedRelation: "agents";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ledger_entries_payout_statement_id_fkey";
+            columns: ["payout_statement_id"];
+            isOneToOne: false;
+            referencedRelation: "payout_statements";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ledger_entries_policy_id_fkey";
+            columns: ["policy_id"];
+            isOneToOne: false;
+            referencedRelation: "policies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ledger_entries_statement_line_id_fkey";
+            columns: ["statement_line_id"];
+            isOneToOne: false;
+            referencedRelation: "statement_lines";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       notification_preferences: {
         Row: {
           muted: boolean;
@@ -373,6 +508,57 @@ export type Database = {
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      payout_statements: {
+        Row: {
+          agency_id: string | null;
+          agent_id: string | null;
+          created_at: string;
+          id: string;
+          payee_type: Database["public"]["Enums"]["payee_type"];
+          period_month: string;
+          status: Database["public"]["Enums"]["payout_status"];
+          total_cents: number;
+          updated_at: string;
+        };
+        Insert: {
+          agency_id?: string | null;
+          agent_id?: string | null;
+          created_at?: string;
+          id?: string;
+          payee_type: Database["public"]["Enums"]["payee_type"];
+          period_month: string;
+          status?: Database["public"]["Enums"]["payout_status"];
+          total_cents?: number;
+          updated_at?: string;
+        };
+        Update: {
+          agency_id?: string | null;
+          agent_id?: string | null;
+          created_at?: string;
+          id?: string;
+          payee_type?: Database["public"]["Enums"]["payee_type"];
+          period_month?: string;
+          status?: Database["public"]["Enums"]["payout_status"];
+          total_cents?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payout_statements_agency_id_fkey";
+            columns: ["agency_id"];
+            isOneToOne: false;
+            referencedRelation: "agencies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payout_statements_agent_id_fkey";
+            columns: ["agent_id"];
+            isOneToOne: false;
+            referencedRelation: "agents";
             referencedColumns: ["id"];
           },
         ];
@@ -546,6 +732,84 @@ export type Database = {
           },
         ];
       };
+      statement_lines: {
+        Row: {
+          amount_cents: number;
+          business_type: Database["public"]["Enums"]["business_type"] | null;
+          carrier_member_id: string | null;
+          created_at: string;
+          id: string;
+          line_kind: Database["public"]["Enums"]["line_kind"];
+          match_reason: string | null;
+          match_status: Database["public"]["Enums"]["match_status"];
+          matched_policy_id: string | null;
+          member_count: number | null;
+          policy_number: string | null;
+          posted: boolean;
+          premium_cents: number | null;
+          raw: Json;
+          row_index: number;
+          statement_id: string;
+          subscriber_dob: string | null;
+          subscriber_name: string | null;
+        };
+        Insert: {
+          amount_cents: number;
+          business_type?: Database["public"]["Enums"]["business_type"] | null;
+          carrier_member_id?: string | null;
+          created_at?: string;
+          id?: string;
+          line_kind?: Database["public"]["Enums"]["line_kind"];
+          match_reason?: string | null;
+          match_status?: Database["public"]["Enums"]["match_status"];
+          matched_policy_id?: string | null;
+          member_count?: number | null;
+          policy_number?: string | null;
+          posted?: boolean;
+          premium_cents?: number | null;
+          raw: Json;
+          row_index: number;
+          statement_id: string;
+          subscriber_dob?: string | null;
+          subscriber_name?: string | null;
+        };
+        Update: {
+          amount_cents?: number;
+          business_type?: Database["public"]["Enums"]["business_type"] | null;
+          carrier_member_id?: string | null;
+          created_at?: string;
+          id?: string;
+          line_kind?: Database["public"]["Enums"]["line_kind"];
+          match_reason?: string | null;
+          match_status?: Database["public"]["Enums"]["match_status"];
+          matched_policy_id?: string | null;
+          member_count?: number | null;
+          policy_number?: string | null;
+          posted?: boolean;
+          premium_cents?: number | null;
+          raw?: Json;
+          row_index?: number;
+          statement_id?: string;
+          subscriber_dob?: string | null;
+          subscriber_name?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "statement_lines_matched_policy_id_fkey";
+            columns: ["matched_policy_id"];
+            isOneToOne: false;
+            referencedRelation: "policies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "statement_lines_statement_id_fkey";
+            columns: ["statement_id"];
+            isOneToOne: false;
+            referencedRelation: "commission_statements";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -587,6 +851,14 @@ export type Database = {
         };
         Returns: undefined;
       };
+      post_statement: {
+        Args: { p_statement_id: string; p_entries: Json };
+        Returns: undefined;
+      };
+      void_statement: {
+        Args: { p_statement_id: string };
+        Returns: undefined;
+      };
     };
     Enums: {
       agency_status: "active" | "inactive";
@@ -595,6 +867,14 @@ export type Database = {
       business_type: "new_business" | "renewal";
       carrier_status: "active" | "inactive";
       client_status: "prospect" | "active" | "inactive";
+      ledger_entry_kind:
+        | "agent_commission"
+        | "agency_commission"
+        | "house_commission"
+        | "agency_override"
+        | "house_override";
+      line_kind: "commission" | "override" | "adjustment";
+      match_status: "unmatched" | "auto_matched" | "manual_matched" | "ignored";
       notification_priority: "normal" | "high";
       notification_type:
         | "client_created"
@@ -602,6 +882,8 @@ export type Database = {
         | "statement_posted"
         | "lines_unmatched"
         | "payout_finalized";
+      payee_type: "agent" | "agency" | "house";
+      payout_status: "open" | "finalized" | "paid";
       policy_status:
         | "draft"
         | "submitted"
@@ -612,6 +894,7 @@ export type Database = {
         | "terminated"
         | "renewed";
       rate_type: "pmpm" | "percent_of_premium";
+      statement_status: "draft" | "matching" | "posted" | "void";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -746,6 +1029,15 @@ export const Constants = {
       business_type: ["new_business", "renewal"],
       carrier_status: ["active", "inactive"],
       client_status: ["prospect", "active", "inactive"],
+      ledger_entry_kind: [
+        "agent_commission",
+        "agency_commission",
+        "house_commission",
+        "agency_override",
+        "house_override",
+      ],
+      line_kind: ["commission", "override", "adjustment"],
+      match_status: ["unmatched", "auto_matched", "manual_matched", "ignored"],
       notification_priority: ["normal", "high"],
       notification_type: [
         "client_created",
@@ -754,6 +1046,8 @@ export const Constants = {
         "lines_unmatched",
         "payout_finalized",
       ],
+      payee_type: ["agent", "agency", "house"],
+      payout_status: ["open", "finalized", "paid"],
       policy_status: [
         "draft",
         "submitted",
@@ -765,6 +1059,7 @@ export const Constants = {
         "renewed",
       ],
       rate_type: ["pmpm", "percent_of_premium"],
+      statement_status: ["draft", "matching", "posted", "void"],
     },
   },
 } as const;

@@ -41,6 +41,23 @@ export const queryKeys = {
     all: ["rateSchedules"] as const,
     byCarrier: (carrierId: string) => ["rateSchedules", "byCarrier", carrierId] as const,
   },
+  statements: {
+    all: ["statements"] as const,
+    lists: () => ["statements", "list"] as const,
+    detail: (id: string) => ["statements", "detail", id] as const,
+    lines: (statementId: string) => ["statements", "lines", statementId] as const,
+  },
+  ledger: {
+    all: ["ledger"] as const,
+    byAgent: (agentId: string) => ["ledger", "byAgent", agentId] as const,
+    byAgency: (agencyId: string) => ["ledger", "byAgency", agencyId] as const,
+    byPolicy: (policyId: string) => ["ledger", "byPolicy", policyId] as const,
+    byPeriod: (periodMonth: string) => ["ledger", "byPeriod", periodMonth] as const,
+  },
+  payouts: {
+    all: ["payouts"] as const,
+    lists: () => ["payouts", "list"] as const,
+  },
   documents: {
     all: ["documents"] as const,
     byClient: (clientId: string) => ["documents", "byClient", clientId] as const,

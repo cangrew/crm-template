@@ -3,7 +3,10 @@ import type {
   AgentStatus,
   CarrierStatus,
   ClientStatus,
+  MatchStatus,
+  PayoutStatus,
   PolicyStatus,
+  StatementStatus,
 } from "@/lib/domain/enums";
 
 /** Badge tone tokens (see components/ui/badge.tsx). */
@@ -52,4 +55,24 @@ export const policyTone: Record<PolicyStatus, Tone> = {
   cancelled: "t-red",
   terminated: "t-slate",
   renewed: "t-teal",
+};
+
+export const statementTone: Record<StatementStatus, Tone> = {
+  draft: "t-slate",
+  matching: "t-amber",
+  posted: "t-green",
+  void: "t-red",
+};
+
+export const matchTone: Record<MatchStatus, Tone> = {
+  unmatched: "t-red",
+  auto_matched: "t-green",
+  manual_matched: "t-teal",
+  ignored: "t-slate",
+};
+
+export const payoutTone: Record<PayoutStatus, Tone> = {
+  open: "t-amber",
+  finalized: "t-blue",
+  paid: "t-green",
 };

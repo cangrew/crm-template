@@ -12,10 +12,22 @@ import {
   CARRIER_STATUS_LABELS,
   CLIENT_STATUSES,
   CLIENT_STATUS_LABELS,
+  LEDGER_ENTRY_KINDS,
+  LEDGER_ENTRY_KIND_LABELS,
+  LINE_KINDS,
+  LINE_KIND_LABELS,
+  MATCH_STATUSES,
+  MATCH_STATUS_LABELS,
+  PAYEE_TYPES,
+  PAYEE_TYPE_LABELS,
+  PAYOUT_STATUSES,
+  PAYOUT_STATUS_LABELS,
   POLICY_STATUSES,
   POLICY_STATUS_LABELS,
   RATE_TYPES,
   RATE_TYPE_LABELS,
+  STATEMENT_STATUSES,
+  STATEMENT_STATUS_LABELS,
 } from "./enums";
 
 describe("enum value sets", () => {
@@ -59,6 +71,36 @@ describe("enum value sets", () => {
       "renewed",
     ]);
   });
+
+  it("defines statement statuses in lifecycle order", () => {
+    expect([...STATEMENT_STATUSES]).toEqual(["draft", "matching", "posted", "void"]);
+  });
+
+  it("defines statement line kinds", () => {
+    expect([...LINE_KINDS]).toEqual(["commission", "override", "adjustment"]);
+  });
+
+  it("defines match statuses", () => {
+    expect([...MATCH_STATUSES]).toEqual(["unmatched", "auto_matched", "manual_matched", "ignored"]);
+  });
+
+  it("defines ledger entry kinds mirroring the commission engine", () => {
+    expect([...LEDGER_ENTRY_KINDS]).toEqual([
+      "agent_commission",
+      "agency_commission",
+      "house_commission",
+      "agency_override",
+      "house_override",
+    ]);
+  });
+
+  it("defines payee types", () => {
+    expect([...PAYEE_TYPES]).toEqual(["agent", "agency", "house"]);
+  });
+
+  it("defines payout statuses in lifecycle order", () => {
+    expect([...PAYOUT_STATUSES]).toEqual(["open", "finalized", "paid"]);
+  });
 });
 
 describe("label maps", () => {
@@ -70,8 +112,14 @@ describe("label maps", () => {
       [BUSINESS_TYPES, BUSINESS_TYPE_LABELS],
       [CARRIER_STATUSES, CARRIER_STATUS_LABELS],
       [CLIENT_STATUSES, CLIENT_STATUS_LABELS],
+      [LEDGER_ENTRY_KINDS, LEDGER_ENTRY_KIND_LABELS],
+      [LINE_KINDS, LINE_KIND_LABELS],
+      [MATCH_STATUSES, MATCH_STATUS_LABELS],
+      [PAYEE_TYPES, PAYEE_TYPE_LABELS],
+      [PAYOUT_STATUSES, PAYOUT_STATUS_LABELS],
       [POLICY_STATUSES, POLICY_STATUS_LABELS],
       [RATE_TYPES, RATE_TYPE_LABELS],
+      [STATEMENT_STATUSES, STATEMENT_STATUS_LABELS],
     ] as const;
     for (const [values, labels] of maps) {
       for (const value of values) {
