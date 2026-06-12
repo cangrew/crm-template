@@ -5,7 +5,7 @@ const DEFAULT_DETAIL_ROWS = 6;
 /**
  * Standard full-page error shell: the `.page` container + `.card` wrapper around
  * the shared {@link ErrorState}. Replaces the copy-pasted error blocks that every
- * route page repeats (see `contacts/page.tsx`, `documents/page.tsx`, …).
+ * route page repeats (see `clients/page.tsx`, `documents/page.tsx`, …).
  *
  * Bespoke per-page loading skeletons stay inline in their orchestrators — they
  * vary too much to share, matching the loads pilot precedent.
@@ -30,7 +30,7 @@ export function PageErrorState({
 
 /**
  * Standard detail-page loading skeleton: a title bar over a card of placeholder
- * rows. Shared by the entity detail pages (contacts, …).
+ * rows. Shared by the entity detail pages (clients, …).
  */
 export function PageDetailLoading({ rows = DEFAULT_DETAIL_ROWS }: { rows?: number }) {
   return (

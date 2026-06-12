@@ -4,67 +4,91 @@ import {
   agencyUpdateSchema,
   agentInsertSchema,
   agentUpdateSchema,
-  contactInsertSchema,
-  contactUpdateSchema,
+  clientInsertSchema,
+  clientUpdateSchema,
   documentInsertSchema,
   profileInsertSchema,
   profileUpdateSchema,
 } from "./schemas";
 
-const validContact = {
-  name: "Ada Lovelace",
+const validClient = {
+  first_name: "Ada",
+  last_name: "Lovelace",
 };
 
-describe("contactInsertSchema", () => {
-  it("accepts a minimal contact and applies defaults", () => {
-    const result = contactInsertSchema.parse(validContact);
-    expect(result.status).toBe("lead");
-    expect(result.name).toBe("Ada Lovelace");
+describe("clientInsertSchema", () => {
+  it("accepts a minimal client and applies defaults", () => {
+    const result = clientInsertSchema.parse(validClient);
+    expect(result.status).toBe("prospect");
+    expect(result.first_name).toBe("Ada");
+    expect(result.last_name).toBe("Lovelace");
   });
 
   it("accepts the optional detail fields", () => {
-    const result = contactInsertSchema.parse({
-      ...validContact,
-      company: "Analytical Engines Ltd",
+    const result = clientInsertSchema.parse({
+      ...validClient,
+      dob: "1815-12-10",
       email: "ada@example.com",
       phone: "+1 555 0100",
+      address: "1 Engine Way, London",
+      agent_id: "5c0e8c1e-95a1-4f44-9d0a-7d3a44d2b1aa",
       notes: "Met at the expo.",
     });
-    expect(result.company).toBe("Analytical Engines Ltd");
+    expect(result.dob).toBe("1815-12-10");
     expect(result.email).toBe("ada@example.com");
+    expect(result.agent_id).toBe("5c0e8c1e-95a1-4f44-9d0a-7d3a44d2b1aa");
   });
 
-  it("rejects a blank name", () => {
-    expect(contactInsertSchema.safeParse({ name: "   " }).success).toBe(false);
+  it("accepts an unassigned (house) client with a null agent", () => {
+    const result = clientInsertSchema.parse({ ...validClient, agent_id: null });
+    expect(result.agent_id).toBeNull();
+  });
+
+  it("rejects blank names", () => {
+    expect(clientInsertSchema.safeParse({ first_name: "   ", last_name: "X" }).success).toBe(false);
+    expect(clientInsertSchema.safeParse({ first_name: "X", last_name: "" }).success).toBe(false);
   });
 
   it("rejects a malformed email", () => {
-    expect(contactInsertSchema.safeParse({ ...validContact, email: "not-an-email" }).success).toBe(
+    expect(clientInsertSchema.safeParse({ ...validClient, email: "not-an-email" }).success).toBe(
       false,
     );
   });
 
+  it("rejects a malformed dob", () => {
+    expect(clientInsertSchema.safeParse({ ...validClient, dob: "12/10/1815" }).success).toBe(false);
+  });
+
   it("rejects an unknown status", () => {
-    expect(contactInsertSchema.safeParse({ ...validContact, status: "vip" }).success).toBe(false);
+    expect(clientInsertSchema.safeParse({ ...validClient, status: "vip" }).success).toBe(false);
   });
 });
 
-describe("contactUpdateSchema", () => {
+describe("clientUpdateSchema", () => {
   it("accepts a partial patch", () => {
-    const result = contactUpdateSchema.parse({ status: "active" });
+    const result = clientUpdateSchema.parse({ status: "active" });
     expect(result.status).toBe("active");
-    expect(result.name).toBeUndefined();
+    expect(result.first_name).toBeUndefined();
   });
 
   it("allows nulling the optional detail fields", () => {
-    const result = contactUpdateSchema.parse({ company: null, email: null, phone: null });
-    expect(result.company).toBeNull();
+    const result = clientUpdateSchema.parse({
+      dob: null,
+      email: null,
+      phone: null,
+      address: null,
+      agent_id: null,
+    });
+    expect(result.dob).toBeNull();
     expect(result.email).toBeNull();
     expect(result.phone).toBeNull();
+    expect(result.address).toBeNull();
+    expect(result.agent_id).toBeNull();
   });
 
   it("rejects a blank name in a patch", () => {
-    expect(contactUpdateSchema.safeParse({ name: "" }).success).toBe(false);
+    expect(clientUpdateSchema.safeParse({ first_name: "" }).success).toBe(false);
+    expect(clientUpdateSchema.safeParse({ last_name: "  " }).success).toBe(false);
   });
 });
 
@@ -170,21 +194,21 @@ describe("agentUpdateSchema", () => {
 });
 
 describe("documentInsertSchema", () => {
-  it("accepts a standalone document without a contact", () => {
+  it("accepts a standalone document without a client", () => {
     const result = documentInsertSchema.parse({
       kind: "contract",
       storage_path: "general/contract/file.pdf",
     });
-    expect(result.contact_id).toBeUndefined();
+    expect(result.client_id).toBeUndefined();
   });
 
-  it("accepts a document attached to a contact", () => {
+  it("accepts a document attached to a client", () => {
     const result = documentInsertSchema.parse({
-      contact_id: "5c0e8c1e-95a1-4f44-9d0a-7d3a44d2b1aa",
+      client_id: "5c0e8c1e-95a1-4f44-9d0a-7d3a44d2b1aa",
       kind: "invoice",
       storage_path: "5c0e8c1e/invoice/file.pdf",
     });
-    expect(result.contact_id).toBe("5c0e8c1e-95a1-4f44-9d0a-7d3a44d2b1aa");
+    expect(result.client_id).toBe("5c0e8c1e-95a1-4f44-9d0a-7d3a44d2b1aa");
   });
 
   it("rejects an unknown kind", () => {

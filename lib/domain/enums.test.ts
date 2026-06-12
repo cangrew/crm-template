@@ -6,8 +6,8 @@ import {
   AGENT_STATUS_LABELS,
   APP_ROLES,
   APP_ROLE_LABELS,
-  CONTACT_STATUSES,
-  CONTACT_STATUS_LABELS,
+  CLIENT_STATUSES,
+  CLIENT_STATUS_LABELS,
 } from "./enums";
 
 describe("enum value sets", () => {
@@ -23,8 +23,8 @@ describe("enum value sets", () => {
     expect([...AGENT_STATUSES]).toEqual(["active", "inactive", "terminated"]);
   });
 
-  it("defines contact statuses", () => {
-    expect([...CONTACT_STATUSES]).toEqual(["lead", "active", "at_risk", "closed"]);
+  it("defines client statuses", () => {
+    expect([...CLIENT_STATUSES]).toEqual(["prospect", "active", "inactive"]);
   });
 });
 
@@ -34,7 +34,7 @@ describe("label maps", () => {
       [APP_ROLES, APP_ROLE_LABELS],
       [AGENCY_STATUSES, AGENCY_STATUS_LABELS],
       [AGENT_STATUSES, AGENT_STATUS_LABELS],
-      [CONTACT_STATUSES, CONTACT_STATUS_LABELS],
+      [CLIENT_STATUSES, CLIENT_STATUS_LABELS],
     ] as const;
     for (const [values, labels] of maps) {
       for (const value of values) {

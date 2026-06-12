@@ -31,12 +31,12 @@ function makeNotification(over: Partial<Notification> = {}): Notification {
   return {
     id: "n1",
     user_id: "u1",
-    type: "contact_created",
+    type: "client_created",
     priority: "normal",
-    title: "New contact: Acme",
-    body: "Acme Co — added as lead.",
-    entity_type: "contact",
-    entity_id: "contact-7",
+    title: "New client: Acme Smith",
+    body: "Added as prospect.",
+    entity_type: "client",
+    entity_id: "client-7",
     read_at: null,
     created_at: "2026-05-29T11:59:00Z",
     ...over,
@@ -68,31 +68,32 @@ describe("NotificationBell", () => {
   });
 
   it("opens the panel and navigates on item click, marking it read", async () => {
-    listValue = [makeNotification({ id: "x", entity_type: "contact", entity_id: "contact-7" })];
+    listValue = [makeNotification({ id: "x", entity_type: "client", entity_id: "client-7" })];
     render(<NotificationBell userId="u1" />);
 
     await userEvent.click(screen.getByRole("button", { name: /notifications/i }));
-    await userEvent.click(screen.getByText("New contact: Acme"));
+    await userEvent.click(screen.getByText("New client: Acme Smith"));
 
     expect(markReadMutate).toHaveBeenCalledWith("x");
-    expect(push).toHaveBeenCalledWith("/contacts/contact-7");
+    expect(push).toHaveBeenCalledWith("/clients/client-7");
   });
 
-  it("routes high-priority notifications to the contact detail page", async () => {
+  it("routes high-priority notifications to the linked entity page", async () => {
     listValue = [
       makeNotification({
         id: "p",
-        type: "contact_at_risk",
+        type: "policy_lapsed",
         priority: "high",
+        entity_type: "policy",
         entity_id: "42",
-        title: "Contact at risk: Acme",
+        title: "Policy lapsed: Acme Smith",
       }),
     ];
     render(<NotificationBell userId="u1" />);
 
     await userEvent.click(screen.getByRole("button", { name: /notifications/i }));
-    await userEvent.click(screen.getByText("Contact at risk: Acme"));
+    await userEvent.click(screen.getByText("Policy lapsed: Acme Smith"));
 
-    expect(push).toHaveBeenCalledWith("/contacts/42");
+    expect(push).toHaveBeenCalledWith("/policies/42");
   });
 });

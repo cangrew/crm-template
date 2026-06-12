@@ -33,18 +33,12 @@ export const AGENT_STATUS_LABELS: Record<AgentStatus, string> = {
   terminated: "Terminated",
 };
 
-/* ------------------------------------------------------------------------- *
- * EXAMPLE ENTITY (contacts) — safe to delete; see README "Removing the
- * example entity". Demonstrates the enum + label-map pattern every business
- * entity in this codebase follows.
- * ------------------------------------------------------------------------- */
+/* clients — policyholders in the book of business (public.client_status) */
+export const CLIENT_STATUSES = ["prospect", "active", "inactive"] as const;
+export type ClientStatus = (typeof CLIENT_STATUSES)[number];
 
-export const CONTACT_STATUSES = ["lead", "active", "at_risk", "closed"] as const;
-export type ContactStatus = (typeof CONTACT_STATUSES)[number];
-
-export const CONTACT_STATUS_LABELS: Record<ContactStatus, string> = {
-  lead: "Lead",
+export const CLIENT_STATUS_LABELS: Record<ClientStatus, string> = {
+  prospect: "Prospect",
   active: "Active",
-  at_risk: "At Risk",
-  closed: "Closed",
+  inactive: "Inactive",
 };

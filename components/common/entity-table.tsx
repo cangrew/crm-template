@@ -16,7 +16,7 @@ export interface EntityColumn<T> {
  * Titled card with a related-records table, driven by a column config instead
  * of hand-rolled <table> markup. Wraps {@link TableCard}, so the count badge
  * and empty state come for free. Use for the per-entity tables on detail pages
- * (a contact's documents, …).
+ * (a client's documents, …).
  */
 export function EntityTable<T extends { id: string }>({
   title,

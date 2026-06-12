@@ -1,7 +1,6 @@
 "use client";
 
-/* EXAMPLE ENTITY — safe to delete; see README "Removing the example entity".
- * Related-records table pattern: EntityTable with a column config (never
+/* Related-records table pattern: EntityTable with a column config (never
  * hand-rolled <table> markup on detail pages). */
 import { Download } from "lucide-react";
 import { EntityTable, type EntityColumn } from "@/components/common/entity-table";
@@ -15,7 +14,7 @@ function fileNameOf(path: string): string {
   return path.split("/").pop() ?? path;
 }
 
-export function ContactDocumentsTable({ documents }: { documents: readonly DocumentRow[] }) {
+export function ClientDocumentsTable({ documents }: { documents: readonly DocumentRow[] }) {
   const signedDownload = useSignedDownload();
   const toast = useToast();
 
@@ -73,7 +72,7 @@ export function ContactDocumentsTable({ documents }: { documents: readonly Docum
       title="Documents"
       rows={documents}
       columns={columns}
-      emptyText="No documents attached to this contact yet."
+      emptyText="No documents attached to this client yet."
     />
   );
 }

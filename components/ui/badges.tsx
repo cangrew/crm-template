@@ -2,12 +2,12 @@ import { Badge } from "@/components/ui/badge";
 import {
   AGENCY_STATUS_LABELS,
   AGENT_STATUS_LABELS,
-  CONTACT_STATUS_LABELS,
+  CLIENT_STATUS_LABELS,
   type AgencyStatus,
   type AgentStatus,
-  type ContactStatus,
+  type ClientStatus,
 } from "@/lib/domain/enums";
-import { agencyTone, agentTone, contactTone } from "@/lib/design/tones";
+import { agencyTone, agentTone, clientTone } from "@/lib/design/tones";
 
 export function AgencyBadge({ status }: { status: AgencyStatus }) {
   return (
@@ -27,14 +27,13 @@ export function AgentBadge({ status }: { status: AgentStatus }) {
   );
 }
 
-/* EXAMPLE ENTITY (contacts) — safe to delete; see README "Removing the example
- * entity". Status badges compose the generic Badge atom with the entity's
- * label map and tone map; add one of these per status enum. */
-export function ContactBadge({ status }: { status: ContactStatus }) {
+/* Status badges compose the generic Badge atom with the entity's label map
+ * and tone map; add one of these per status enum. */
+export function ClientBadge({ status }: { status: ClientStatus }) {
   return (
-    <Badge tone={contactTone[status]}>
+    <Badge tone={clientTone[status]}>
       <span className="bdot" />
-      {CONTACT_STATUS_LABELS[status]}
+      {CLIENT_STATUS_LABELS[status]}
     </Badge>
   );
 }

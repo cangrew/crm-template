@@ -17,6 +17,6 @@ test.describe("notifications", () => {
   test("the preferences tab lists in-app notification toggles", async ({ page }) => {
     await page.goto("/account?tab=preferences");
     await expect(page.getByRole("heading", { name: /in-app notifications/i })).toBeVisible();
-    await expect(page.getByText("New contact added")).toBeVisible();
+    await expect(page.getByText("New client added")).toBeVisible();
   });
 });

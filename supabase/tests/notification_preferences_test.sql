@@ -17,44 +17,53 @@ values
 
 update public.profiles set role = 'admin' where id = 'cccccccc-cccc-4ccc-8ccc-ccccccccccc1';
 update public.profiles set role = 'manager' where id = 'cccccccc-cccc-4ccc-8ccc-ccccccccccc2';
--- ...2 mutes contact_created (below).
+-- ...2 mutes client_created (below).
 
 insert into public.notification_preferences (user_id, type, muted)
-values ('cccccccc-cccc-4ccc-8ccc-ccccccccccc2', 'contact_created', true);
+values ('cccccccc-cccc-4ccc-8ccc-ccccccccccc2', 'client_created', true);
 
 -- ---------------------------------------------------------------------------
--- Creating a contact (as superuser, so neither user is the actor) should reach
--- the admin but skip the manager who muted contact_created.
+-- Creating a client (as superuser, so neither user is the actor) should reach
+-- the admin but skip the manager who muted client_created.
 -- ---------------------------------------------------------------------------
 reset role;
 set local request.jwt.claims to '';
 
-insert into public.contacts (id, name, status)
-values ('dddddddd-dddd-4ddd-8ddd-ddddddddddd1', 'Pref Contact', 'lead');
+insert into public.clients (id, first_name, last_name, status)
+values ('dddddddd-dddd-4ddd-8ddd-ddddddddddd1', 'Pref', 'Client', 'prospect');
 
 select is(
   (select count(*) from public.notifications
-   where type = 'contact_created' and user_id = 'cccccccc-cccc-4ccc-8ccc-ccccccccccc1'),
+   where type = 'client_created' and user_id = 'cccccccc-cccc-4ccc-8ccc-ccccccccccc1'),
   1::bigint,
-  'unmuted admin still receives contact_created'
+  'unmuted admin still receives client_created'
 );
 
 select is(
   (select count(*) from public.notifications
-   where type = 'contact_created' and user_id = 'cccccccc-cccc-4ccc-8ccc-ccccccccccc2'),
+   where type = 'client_created' and user_id = 'cccccccc-cccc-4ccc-8ccc-ccccccccccc2'),
   0::bigint,
-  'manager who muted contact_created receives nothing'
+  'manager who muted client_created receives nothing'
 );
 
--- A different type the manager did NOT mute still reaches them.
-update public.contacts set status = 'at_risk'
-where id = 'dddddddd-dddd-4ddd-8ddd-ddddddddddd1';
+-- A different type the manager did NOT mute still reaches them (invoked via
+-- the fan-out helper directly; the statement triggers land in a later module).
+do $$
+begin
+  perform public.notify_roles(
+    array['admin', 'manager']::public.app_role[],
+    'statement_posted', 'normal',
+    'Statement posted', 'April statement ingested.',
+    'statement', 'dddddddd-dddd-4ddd-8ddd-ddddddddddd2'
+  );
+end;
+$$;
 
 select is(
   (select count(*) from public.notifications
-   where type = 'contact_at_risk' and user_id = 'cccccccc-cccc-4ccc-8ccc-ccccccccccc2'),
+   where type = 'statement_posted' and user_id = 'cccccccc-cccc-4ccc-8ccc-ccccccccccc2'),
   1::bigint,
-  'unmuted contact_at_risk still reaches the manager'
+  'unmuted statement_posted still reaches the manager'
 );
 
 -- ---------------------------------------------------------------------------

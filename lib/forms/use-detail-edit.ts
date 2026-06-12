@@ -23,8 +23,8 @@ export interface UseDetailEditOptions<TDraft, TPatch> {
 }
 
 /**
- * The detail-page edit workflow shared by entity detail pages (see the contacts
- * example): an editing flag, a draft of raw field strings, per-field error
+ * The detail-page edit workflow shared by entity detail pages (see the clients
+ * pages): an editing flag, a draft of raw field strings, per-field error
  * messages mapped from zod issues, and start/cancel/save transitions. Pages
  * render their own cards and pass `draft`/`errors`/`setField` down.
  */

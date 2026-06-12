@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { CONTACT_STATUSES } from "@/lib/domain/enums";
-import { contactTone } from "./tones";
+import { CLIENT_STATUSES } from "@/lib/domain/enums";
+import { clientTone } from "./tones";
 
 const VALID_TONE_CLASSES = new Set([
   "t-slate",
@@ -16,15 +16,15 @@ const VALID_TONE_CLASSES = new Set([
 ]);
 
 describe("design tone maps", () => {
-  it("contactTone covers every ContactStatus with a valid tone class", () => {
-    for (const status of CONTACT_STATUSES) {
-      const cls = contactTone[status];
-      expect(cls, `contactTone[${status}]`).toBeDefined();
+  it("clientTone covers every ClientStatus with a valid tone class", () => {
+    for (const status of CLIENT_STATUSES) {
+      const cls = clientTone[status];
+      expect(cls, `clientTone[${status}]`).toBeDefined();
       expect(VALID_TONE_CLASSES.has(cls)).toBe(true);
     }
   });
 
-  it("at-risk contacts map to red", () => {
-    expect(contactTone.at_risk).toBe("t-red");
+  it("active clients map to green", () => {
+    expect(clientTone.active).toBe("t-green");
   });
 });

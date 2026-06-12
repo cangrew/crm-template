@@ -1,7 +1,7 @@
--- CRM Template — minimal bootstrap seed.
+-- Findway — minimal bootstrap seed.
 -- Runs automatically on `supabase db reset`. Provides exactly one
 -- admin user so you can sign in and the app shell renders. All
--- workspace tables (contacts, documents, etc.) start empty.
+-- workspace tables (clients, documents, etc.) start empty.
 --
 -- To load the full sample dataset on top, run:  pnpm db:reset:sample
 -- See: supabase/seeds/sample.sql

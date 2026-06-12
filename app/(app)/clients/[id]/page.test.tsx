@@ -14,9 +14,9 @@ const mockEditCancel = vi.fn();
 const mockEditSave = vi.fn();
 const mockEditFinish = vi.fn();
 
-let contactData: unknown = null;
-let contactIsLoading = false;
-let contactIsError = false;
+let clientData: unknown = null;
+let clientIsLoading = false;
+let clientIsError = false;
 let documentsData: unknown[] = [];
 let profileData: { role: string | null } | undefined = { role: "admin" };
 let updateIsPending = false;
@@ -25,23 +25,24 @@ let editDraft: unknown = null;
 let editErrors: Record<string, { message: string }> = {};
 
 vi.mock("next/navigation", () => ({
-  useParams: () => ({ id: "contact-abc-123" }),
+  useParams: () => ({ id: "client-abc-123" }),
   useRouter: () => ({ push: mockPush }),
 }));
 
 vi.mock("@/lib/data/hooks", () => ({
-  useContact: () => ({
-    data: contactData,
-    isLoading: contactIsLoading,
-    isError: contactIsError,
+  useClient: () => ({
+    data: clientData,
+    isLoading: clientIsLoading,
+    isError: clientIsError,
     refetch: mockRefetch,
   }),
-  useDocumentsByContact: () => ({ data: documentsData }),
-  useUpdateContact: () => ({
+  useDocumentsByClient: () => ({ data: documentsData }),
+  useAgents: () => ({ data: [{ id: "a1", full_name: "Casey Agent" }] }),
+  useUpdateClient: () => ({
     mutate: mockUpdateMutate,
     isPending: updateIsPending,
   }),
-  useDeleteContact: () => ({
+  useDeleteClient: () => ({
     mutate: mockDeleteMutate,
   }),
   useCurrentProfile: () => ({ data: profileData }),
@@ -116,23 +117,21 @@ vi.mock("@/components/common/two-column-layout", () => ({
   ),
 }));
 
-vi.mock("@/components/contacts/detail/contact-profile-card", () => ({
-  ContactProfileCard: () => <div data-testid="contact-profile-card" />,
+vi.mock("@/components/clients/detail/client-profile-card", () => ({
+  ClientProfileCard: () => <div data-testid="client-profile-card" />,
 }));
 
-vi.mock("@/components/contacts/detail/contact-documents-table", () => ({
-  ContactDocumentsTable: () => <div data-testid="contact-documents-table" />,
+vi.mock("@/components/clients/detail/client-documents-table", () => ({
+  ClientDocumentsTable: () => <div data-testid="client-documents-table" />,
 }));
 
-vi.mock("@/components/contacts/detail/contact-draft", () => ({
-  draftFromContact: (c: { name: string }) => ({ name: c.name }),
+vi.mock("@/components/clients/detail/client-draft", () => ({
+  draftFromClient: (c: { first_name: string }) => ({ first_name: c.first_name }),
   draftToPatch: (d: unknown) => d,
 }));
 
 vi.mock("@/components/ui/badges", () => ({
-  ContactBadge: ({ status }: { status: string }) => (
-    <span data-testid="contact-badge">{status}</span>
-  ),
+  ClientBadge: ({ status }: { status: string }) => <span data-testid="client-badge">{status}</span>,
 }));
 
 vi.mock("@/components/ui/btn", () => ({
@@ -153,8 +152,8 @@ vi.mock("@/components/ui/btn", () => ({
   ),
 }));
 
-vi.mock("@/components/ui/contact-status-picker", () => ({
-  ContactStatusPicker: () => <div data-testid="status-picker" />,
+vi.mock("@/components/ui/client-status-picker", () => ({
+  ClientStatusPicker: () => <div data-testid="status-picker" />,
 }));
 
 vi.mock("@/components/ui/modal", () => ({
@@ -181,26 +180,29 @@ vi.mock("@/components/ui/modal", () => ({
 }));
 
 vi.mock("@/lib/domain/schemas", () => ({
-  contactUpdateSchema: {},
+  clientUpdateSchema: {},
 }));
 
-import ContactDetailPage from "./page";
+import ClientDetailPage from "./page";
 
-function makeContact(
+function makeClient(
   overrides: Partial<{
     id: string;
-    name: string;
-    company: string | null;
+    first_name: string;
+    last_name: string;
     status: string;
   }> = {},
 ) {
   return {
-    id: "contact-abc-123",
-    name: "Alice Smith",
-    company: "Acme Corp",
+    id: "client-abc-123",
+    first_name: "Alice",
+    last_name: "Smith",
     status: "active",
+    dob: "1980-04-02",
     email: "alice@acme.com",
     phone: null,
+    address: null,
+    agent_id: "a1",
     notes: null,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
@@ -210,9 +212,9 @@ function makeContact(
 
 beforeEach(() => {
   vi.clearAllMocks();
-  contactData = null;
-  contactIsLoading = false;
-  contactIsError = false;
+  clientData = null;
+  clientIsLoading = false;
+  clientIsError = false;
   documentsData = [];
   profileData = { role: "admin" };
   updateIsPending = false;
@@ -221,135 +223,135 @@ beforeEach(() => {
   editErrors = {};
 });
 
-describe("ContactDetailPage", () => {
-  it("shows loading state when contact is loading", () => {
-    contactIsLoading = true;
-    render(<ContactDetailPage />);
+describe("ClientDetailPage", () => {
+  it("shows loading state when client is loading", () => {
+    clientIsLoading = true;
+    render(<ClientDetailPage />);
     expect(screen.getByTestId("detail-loading")).toBeInTheDocument();
   });
 
-  it("shows loading state when contact data is null", () => {
-    contactData = null;
-    contactIsLoading = false;
-    render(<ContactDetailPage />);
+  it("shows loading state when client data is null", () => {
+    clientData = null;
+    clientIsLoading = false;
+    render(<ClientDetailPage />);
     expect(screen.getByTestId("detail-loading")).toBeInTheDocument();
   });
 
-  it("shows error state when contact fetch fails", () => {
-    contactIsError = true;
-    render(<ContactDetailPage />);
-    expect(screen.getByText("Failed to load this contact.")).toBeInTheDocument();
+  it("shows error state when client fetch fails", () => {
+    clientIsError = true;
+    render(<ClientDetailPage />);
+    expect(screen.getByText("Failed to load this client.")).toBeInTheDocument();
   });
 
   it("calls refetch when Retry is clicked in error state", () => {
-    contactIsError = true;
-    render(<ContactDetailPage />);
+    clientIsError = true;
+    render(<ClientDetailPage />);
     screen.getByRole("button", { name: "Retry" }).click();
     expect(mockRefetch).toHaveBeenCalledTimes(1);
   });
 
-  it("renders the contact name as the page title", () => {
-    contactData = makeContact({ name: "Alice Smith" });
-    render(<ContactDetailPage />);
+  it("renders the client full name as the page title", () => {
+    clientData = makeClient({ first_name: "Alice", last_name: "Smith" });
+    render(<ClientDetailPage />);
     expect(screen.getByRole("heading", { name: "Alice Smith" })).toBeInTheDocument();
   });
 
-  it("renders the Back to Contacts link", () => {
-    contactData = makeContact();
-    render(<ContactDetailPage />);
-    expect(screen.getByRole("link", { name: "Back to Contacts" })).toBeInTheDocument();
+  it("renders the Back to Clients link", () => {
+    clientData = makeClient();
+    render(<ClientDetailPage />);
+    expect(screen.getByRole("link", { name: "Back to Clients" })).toBeInTheDocument();
   });
 
   it("shows the status picker for admin (can update)", () => {
-    contactData = makeContact();
+    clientData = makeClient();
     profileData = { role: "admin" };
-    render(<ContactDetailPage />);
+    render(<ClientDetailPage />);
     expect(screen.getByTestId("status-picker")).toBeInTheDocument();
   });
 
   it("shows a static badge for agent (cannot update)", () => {
-    contactData = makeContact({ status: "active" });
+    clientData = makeClient({ status: "active" });
     profileData = { role: "agent" };
-    render(<ContactDetailPage />);
-    expect(screen.getByTestId("contact-badge")).toBeInTheDocument();
+    render(<ClientDetailPage />);
+    expect(screen.getByTestId("client-badge")).toBeInTheDocument();
     expect(screen.queryByTestId("status-picker")).not.toBeInTheDocument();
   });
 
   it("shows Edit and Delete buttons for admin", () => {
-    contactData = makeContact();
+    clientData = makeClient();
     profileData = { role: "admin" };
-    render(<ContactDetailPage />);
+    render(<ClientDetailPage />);
     expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
   });
 
   it("shows Edit but not Delete for manager (cannot delete)", () => {
-    contactData = makeContact();
+    clientData = makeClient();
     profileData = { role: "manager" };
-    render(<ContactDetailPage />);
+    render(<ClientDetailPage />);
     expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
   });
 
   it("hides Edit and Delete for agent", () => {
-    contactData = makeContact();
+    clientData = makeClient();
     profileData = { role: "agent" };
-    render(<ContactDetailPage />);
+    render(<ClientDetailPage />);
     expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
   });
 
   it("enters edit mode when Edit is clicked", async () => {
-    contactData = makeContact();
-    render(<ContactDetailPage />);
+    clientData = makeClient();
+    render(<ClientDetailPage />);
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
     expect(mockEditStart).toHaveBeenCalledTimes(1);
   });
 
   it("shows Cancel and Save buttons when in edit mode", () => {
-    contactData = makeContact();
+    clientData = makeClient();
     editEditing = true;
-    render(<ContactDetailPage />);
+    render(<ClientDetailPage />);
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
   });
 
   it("calls edit.cancel when Cancel is clicked in edit mode", async () => {
-    contactData = makeContact();
+    clientData = makeClient();
     editEditing = true;
-    render(<ContactDetailPage />);
+    render(<ClientDetailPage />);
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(mockEditCancel).toHaveBeenCalledTimes(1);
   });
 
   it("calls edit.save when Save is clicked", async () => {
-    contactData = makeContact();
+    clientData = makeClient();
     editEditing = true;
-    render(<ContactDetailPage />);
+    render(<ClientDetailPage />);
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(mockEditSave).toHaveBeenCalledTimes(1);
   });
 
   it("disables Save and shows 'Saving…' while update is pending", () => {
-    contactData = makeContact();
+    clientData = makeClient();
     editEditing = true;
     updateIsPending = true;
-    render(<ContactDetailPage />);
+    render(<ClientDetailPage />);
     const saveBtn = screen.getByRole("button", { name: "Saving…" });
     expect(saveBtn).toBeDisabled();
   });
 
   it("opens confirm dialog when Delete is clicked", async () => {
-    contactData = makeContact();
-    render(<ContactDetailPage />);
+    clientData = makeClient();
+    render(<ClientDetailPage />);
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Delete contact?" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Delete client?" })).toBeInTheDocument();
   });
 
-  it("calls deleteContact.mutate and navigates away on delete confirm", async () => {
-    contactData = makeContact({ id: "contact-abc-123" });
-    render(<ContactDetailPage />);
+  it("calls deleteClient.mutate and navigates away on delete confirm", async () => {
+    clientData = makeClient({ id: "client-abc-123" });
+    render(<ClientDetailPage />);
 
     // Open the confirm dialog
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
@@ -362,16 +364,16 @@ describe("ContactDetailPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
     expect(mockDeleteMutate).toHaveBeenCalledWith(
-      "contact-abc-123",
+      "client-abc-123",
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     );
-    expect(mockToast).toHaveBeenCalledWith("Contact removed", "success");
-    expect(mockPush).toHaveBeenCalledWith("/contacts");
+    expect(mockToast).toHaveBeenCalledWith("Client removed", "success");
+    expect(mockPush).toHaveBeenCalledWith("/clients");
   });
 
   it("closes the confirm dialog without deleting when Cancel is clicked", async () => {
-    contactData = makeContact();
-    render(<ContactDetailPage />);
+    clientData = makeClient();
+    render(<ClientDetailPage />);
 
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
@@ -381,15 +383,15 @@ describe("ContactDetailPage", () => {
   });
 
   it("renders the profile card and documents table", () => {
-    contactData = makeContact();
-    render(<ContactDetailPage />);
-    expect(screen.getByTestId("contact-profile-card")).toBeInTheDocument();
-    expect(screen.getByTestId("contact-documents-table")).toBeInTheDocument();
+    clientData = makeClient();
+    render(<ClientDetailPage />);
+    expect(screen.getByTestId("client-profile-card")).toBeInTheDocument();
+    expect(screen.getByTestId("client-documents-table")).toBeInTheDocument();
   });
 
   it("toasts an error when delete fails", async () => {
-    contactData = makeContact();
-    render(<ContactDetailPage />);
+    clientData = makeClient();
+    render(<ClientDetailPage />);
 
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
 

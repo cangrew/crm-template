@@ -1,7 +1,6 @@
 "use client";
 
-/* EXAMPLE ENTITY — safe to delete; see README "Removing the example entity".
- * Detail-page pattern: PageHeader with edit/delete actions, useDetailEdit +
+/* Detail-page pattern: PageHeader with edit/delete actions, useDetailEdit +
  * draft module for the edit flow, InfoCard/KvList for fields, EntityTable for
  * related records, ConfirmDialog for destructive actions, and can()-gated
  * affordances per role. */
@@ -12,51 +11,53 @@ import { PageHeader } from "@/components/common/page-header";
 import { PageDetailLoading, PageErrorState } from "@/components/common/page-states";
 import { TwoColumnLayout } from "@/components/common/two-column-layout";
 import {
-  type ContactDraft,
-  draftFromContact,
+  type ClientDraft,
+  draftFromClient,
   draftToPatch,
-} from "@/components/contacts/detail/contact-draft";
-import { ContactDocumentsTable } from "@/components/contacts/detail/contact-documents-table";
-import { ContactProfileCard } from "@/components/contacts/detail/contact-profile-card";
-import { ContactBadge } from "@/components/ui/badges";
+} from "@/components/clients/detail/client-draft";
+import { ClientDocumentsTable } from "@/components/clients/detail/client-documents-table";
+import { ClientProfileCard } from "@/components/clients/detail/client-profile-card";
+import { ClientBadge } from "@/components/ui/badges";
 import { Btn } from "@/components/ui/btn";
-import { ContactStatusPicker } from "@/components/ui/contact-status-picker";
+import { ClientStatusPicker } from "@/components/ui/client-status-picker";
 import { ConfirmDialog } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { can } from "@/lib/auth/roles";
 import {
-  useContact,
+  useAgents,
+  useClient,
   useCurrentProfile,
-  useDeleteContact,
-  useDocumentsByContact,
-  useUpdateContact,
+  useDeleteClient,
+  useDocumentsByClient,
+  useUpdateClient,
 } from "@/lib/data/hooks";
-import { contactUpdateSchema, type ContactUpdate } from "@/lib/domain/schemas";
+import { clientUpdateSchema, type ClientUpdate } from "@/lib/domain/schemas";
 import { useDetailEdit } from "@/lib/forms/use-detail-edit";
 
-export default function ContactDetailPage() {
+export default function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const contactQ = useContact(id);
-  const documentsQ = useDocumentsByContact(id);
-  const updateContact = useUpdateContact();
-  const deleteContact = useDeleteContact();
+  const clientQ = useClient(id);
+  const documentsQ = useDocumentsByClient(id);
+  const agentsQ = useAgents();
+  const updateClient = useUpdateClient();
+  const deleteClient = useDeleteClient();
   const profileQ = useCurrentProfile();
   const toast = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const edit = useDetailEdit<ContactDraft, ContactUpdate>({
+  const edit = useDetailEdit<ClientDraft, ClientUpdate>({
     toPatch: draftToPatch,
-    schema: contactUpdateSchema,
+    schema: clientUpdateSchema,
     onInvalid: () => toast("Please fix the highlighted fields.", "error"),
     onValid: (patch) => {
-      const current = contactQ.data;
+      const current = clientQ.data;
       if (!current) return;
-      updateContact.mutate(
+      updateClient.mutate(
         { id: current.id, patch },
         {
           onSuccess: () => {
             edit.finish();
-            toast("Contact updated", "success");
+            toast("Client updated", "success");
           },
           onError: (e) => toast(`Could not save: ${e.message}`, "error"),
         },
@@ -65,26 +66,25 @@ export default function ContactDetailPage() {
   });
 
   const role = profileQ.data?.role ?? null;
-  const canUpdate = role != null && can(role, "update", "contacts");
-  const canDelete = role != null && can(role, "delete", "contacts");
+  const canUpdate = role != null && can(role, "update", "clients");
+  const canDelete = role != null && can(role, "delete", "clients");
 
-  if (contactQ.isError) {
-    return (
-      <PageErrorState body="Failed to load this contact." onRetry={() => contactQ.refetch()} />
-    );
+  if (clientQ.isError) {
+    return <PageErrorState body="Failed to load this client." onRetry={() => clientQ.refetch()} />;
   }
 
-  if (contactQ.isLoading || !contactQ.data) {
+  if (clientQ.isLoading || !clientQ.data) {
     return <PageDetailLoading rows={5} />;
   }
 
-  const c = contactQ.data;
+  const c = clientQ.data;
+  const fullName = `${c.first_name} ${c.last_name}`;
 
   function doDelete() {
-    deleteContact.mutate(c.id, {
+    deleteClient.mutate(c.id, {
       onSuccess: () => {
-        toast("Contact removed", "success");
-        router.push("/contacts");
+        toast("Client removed", "success");
+        router.push("/clients");
       },
       onError: (e) => toast(`Could not delete: ${e.message}`, "error"),
     });
@@ -93,20 +93,15 @@ export default function ContactDetailPage() {
   return (
     <div className="mx-auto max-w-[1440px] px-8 pt-[26px] pb-20">
       <PageHeader
-        backHref="/contacts"
-        backLabel="Back to Contacts"
-        title={c.name}
-        subtitle={
-          <>
-            <span className="mono">{c.id.slice(0, 8)}</span>
-            {c.company ? ` · ${c.company}` : ""}
-          </>
-        }
+        backHref="/clients"
+        backLabel="Back to Clients"
+        title={fullName}
+        subtitle={<span className="mono">{c.id.slice(0, 8)}</span>}
         badges={
           canUpdate ? (
-            <ContactStatusPicker contactId={c.id} contactLabel={c.name} status={c.status} />
+            <ClientStatusPicker clientId={c.id} clientLabel={fullName} status={c.status} />
           ) : (
-            <ContactBadge status={c.status} />
+            <ClientBadge status={c.status} />
           )
         }
         actions={
@@ -116,7 +111,7 @@ export default function ContactDetailPage() {
                 <Btn
                   variant="outline"
                   icon={<Edit2 size={15} />}
-                  onClick={() => edit.start(draftFromContact(c))}
+                  onClick={() => edit.start(draftFromClient(c))}
                 >
                   Edit
                 </Btn>
@@ -139,10 +134,10 @@ export default function ContactDetailPage() {
               <Btn
                 variant="primary"
                 icon={<Save size={15} />}
-                disabled={updateContact.isPending}
+                disabled={updateClient.isPending}
                 onClick={edit.save}
               >
-                {updateContact.isPending ? "Saving…" : "Save"}
+                {updateClient.isPending ? "Saving…" : "Save"}
               </Btn>
             </>
           )
@@ -151,23 +146,24 @@ export default function ContactDetailPage() {
 
       <TwoColumnLayout
         left={
-          <ContactProfileCard
-            contact={c}
+          <ClientProfileCard
+            client={c}
+            agents={agentsQ.data ?? []}
             editing={edit.editing}
             draft={edit.draft ?? undefined}
             errors={edit.errors}
             onField={edit.setField}
           />
         }
-        right={<ContactDocumentsTable documents={documentsQ.data ?? []} />}
+        right={<ClientDocumentsTable documents={documentsQ.data ?? []} />}
       />
 
       <ConfirmDialog
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
         onConfirm={doDelete}
-        title="Delete contact?"
-        body={`Permanently remove ${c.name}. Attached documents will be deleted with it.`}
+        title="Delete client?"
+        body={`Permanently remove ${fullName}. Attached documents will be deleted with it.`}
         hint="This cannot be undone."
       />
     </div>

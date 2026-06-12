@@ -1,6 +1,6 @@
 import type { AppRole } from "@/lib/domain/enums";
 
-export type Resource = "contacts" | "documents" | "users" | "agents" | "agencies";
+export type Resource = "clients" | "documents" | "users" | "agents" | "agencies";
 
 export type Action = "create" | "read" | "update" | "delete";
 
@@ -16,28 +16,28 @@ const ALL: readonly Action[] = ["create", "read", "update", "delete"];
  */
 const PERMISSIONS: Record<AppRole, Record<Resource, readonly Action[]>> = {
   admin: {
-    contacts: ALL,
+    clients: ALL,
     documents: ALL,
     users: ALL,
     agents: ALL,
     agencies: ALL,
   },
   manager: {
-    contacts: ["create", "read", "update"],
+    clients: ["create", "read", "update"],
     documents: ALL,
     users: [],
     agents: ["create", "read", "update"],
     agencies: ["create", "read", "update"],
   },
   agent: {
-    contacts: ["read"],
+    clients: ["read"],
     documents: ["read"],
     users: [],
     agents: ["read"],
     agencies: [],
   },
   agency_owner: {
-    contacts: ["read"],
+    clients: ["read"],
     documents: ["read"],
     users: [],
     agents: ["read"],

@@ -3,7 +3,7 @@
 -- Run with: pnpm db:test  (wraps `supabase test db`, which uses pgTAP).
 -- Everything runs inside a single transaction that is rolled back at the end.
 --
--- Unlike permissive starters, contact reads are role-gated too, so these
+-- Unlike permissive starters, client reads are role-gated too, so these
 -- assertions cover read denial as well as write denial for pending and
 -- deactivated accounts.
 
@@ -29,9 +29,9 @@ where id = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee2';
 -- ...e3 is an active manager (control).
 update public.profiles set role = 'manager' where id = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee3';
 
--- A contact the gated SELECT policy should hide from pending/deactivated users.
-insert into public.contacts (id, name, status)
-values ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeee10', 'Prov Fixture Contact', 'lead');
+-- A client the gated SELECT policy should hide from pending/deactivated users.
+insert into public.clients (id, first_name, last_name, status)
+values ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeee10', 'Prov', 'Fixture', 'prospect');
 
 -- The first-login trigger must leave the role unset (pending admin assignment).
 select is(
@@ -54,16 +54,16 @@ select is(
 );
 
 select is(
-  (select count(*) from public.contacts),
+  (select count(*) from public.clients),
   0::bigint,
-  'pending user cannot read contacts'
+  'pending user cannot read clients'
 );
 
 select throws_ok(
-  $$insert into public.contacts (name) values ('Pending Contact')$$,
+  $$insert into public.clients (first_name, last_name) values ('Pending', 'Client')$$,
   '42501',
   null,
-  'pending user cannot insert a contact'
+  'pending user cannot insert a client'
 );
 
 -- ===========================================================================
@@ -81,16 +81,16 @@ select is(
 );
 
 select is(
-  (select count(*) from public.contacts),
+  (select count(*) from public.clients),
   0::bigint,
-  'deactivated manager cannot read contacts'
+  'deactivated manager cannot read clients'
 );
 
 select throws_ok(
-  $$insert into public.contacts (name) values ('Disabled Contact')$$,
+  $$insert into public.clients (first_name, last_name) values ('Disabled', 'Client')$$,
   '42501',
   null,
-  'deactivated manager cannot insert a contact'
+  'deactivated manager cannot insert a client'
 );
 
 -- ===========================================================================
@@ -101,15 +101,15 @@ set local role authenticated;
 set local request.jwt.claims to '{"sub":"eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee3"}';
 
 select is(
-  (select count(*) from public.contacts
+  (select count(*) from public.clients
    where id = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeee10'),
   1::bigint,
-  'active manager can read contacts'
+  'active manager can read clients'
 );
 
 select lives_ok(
-  $$insert into public.contacts (name) values ('Active Contact')$$,
-  'active manager can insert a contact'
+  $$insert into public.clients (first_name, last_name) values ('Active', 'Client')$$,
+  'active manager can insert a client'
 );
 
 select * from finish();

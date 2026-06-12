@@ -100,7 +100,7 @@ describe("GET /api/documents/[id]/download", () => {
   });
 
   it("passes the document storage_path to createSignedDownloadUrl", async () => {
-    const storagePath = "contacts/abc-123/invoice-2024.pdf";
+    const storagePath = "clients/abc-123/invoice-2024.pdf";
     mockRequireApiRole.mockResolvedValue({ ok: true, profile: { id: "u1", role: "admin" } });
     mockGetDocument.mockResolvedValue({ id: "doc-5", storage_path: storagePath });
     mockCreateSignedDownloadUrl.mockResolvedValue("https://example.com/url");

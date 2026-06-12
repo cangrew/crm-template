@@ -3,11 +3,11 @@
 import { BookUser, Search, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ContactBadge } from "@/components/ui/badges";
+import { ClientBadge } from "@/components/ui/badges";
 import { canAccessPath } from "@/lib/auth/route-access";
 import { NAV_GROUPS } from "@/lib/config/nav";
-import { useContacts, useCurrentProfile } from "@/lib/data/hooks";
-import type { ContactStatus } from "@/lib/domain/enums";
+import { useClients, useCurrentProfile } from "@/lib/data/hooks";
+import type { ClientStatus } from "@/lib/domain/enums";
 
 type PageItem = {
   kind: "page";
@@ -25,16 +25,16 @@ const PAGES: PageItem[] = NAV_GROUPS.flatMap((g) =>
   })),
 );
 
-type ContactItem = {
-  kind: "contact";
+type ClientItem = {
+  kind: "client";
   href: string;
   label: string;
   sub: string;
   icon: LucideIcon;
-  status: ContactStatus;
+  status: ClientStatus;
 };
 
-type Item = PageItem | ContactItem;
+type Item = PageItem | ClientItem;
 
 export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   if (!open) return null;
@@ -48,7 +48,7 @@ function PaletteContent({ onClose }: { onClose: () => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const profileQ = useCurrentProfile();
   const role = profileQ.data?.role ?? null;
-  const contactsQ = useContacts();
+  const clientsQ = useClients();
 
   useEffect(() => {
     const t = window.setTimeout(() => inputRef.current?.focus(), 30);
@@ -61,29 +61,29 @@ function PaletteContent({ onClose }: { onClose: () => void }) {
       (p) => canAccessPath(p.href, role) && (!q || p.label.toLowerCase().includes(q)),
     );
 
-    const contactMatches: Item[] = (contactsQ.data ?? [])
+    const clientMatches: Item[] = (clientsQ.data ?? [])
       .filter(
         (c) =>
           !q ||
-          c.name.toLowerCase().includes(q) ||
-          (c.company ?? "").toLowerCase().includes(q) ||
-          (c.email ?? "").toLowerCase().includes(q),
+          `${c.first_name} ${c.last_name}`.toLowerCase().includes(q) ||
+          (c.email ?? "").toLowerCase().includes(q) ||
+          (c.phone ?? "").toLowerCase().includes(q),
       )
       .slice(0, 5)
-      .map<ContactItem>((c) => ({
-        kind: "contact",
-        href: `/contacts/${c.id}`,
-        label: c.name,
-        sub: `${c.company ?? "—"} · ${c.email ?? "—"}`,
+      .map<ClientItem>((c) => ({
+        kind: "client",
+        href: `/clients/${c.id}`,
+        label: `${c.first_name} ${c.last_name}`,
+        sub: `${c.email ?? "—"} · ${c.phone ?? "—"}`,
         icon: BookUser,
         status: c.status,
       }));
 
     const out: { title: string; items: Item[] }[] = [];
     if (pageMatches.length) out.push({ title: "Pages", items: pageMatches });
-    if (contactMatches.length) out.push({ title: "Contacts", items: contactMatches });
+    if (clientMatches.length) out.push({ title: "Clients", items: clientMatches });
     return out;
-  }, [query, role, contactsQ.data]);
+  }, [query, role, clientsQ.data]);
 
   const flat = useMemo(() => groups.flatMap((g) => g.items), [groups]);
   const clampedSel = Math.min(sel, Math.max(flat.length - 1, 0));
@@ -121,7 +121,7 @@ function PaletteContent({ onClose }: { onClose: () => void }) {
           <input
             ref={inputRef}
             value={query}
-            placeholder="Search contacts, pages…"
+            placeholder="Search clients, pages…"
             onChange={(e) => {
               setQuery(e.target.value);
               setSel(0);
@@ -157,9 +157,9 @@ function PaletteContent({ onClose }: { onClose: () => void }) {
                       <div className="ci-name">{it.label}</div>
                       {"sub" in it && <div className="ci-sub">{it.sub}</div>}
                     </span>
-                    {it.kind === "contact" && (
+                    {it.kind === "client" && (
                       <span className="ci-meta">
-                        <ContactBadge status={it.status} />
+                        <ClientBadge status={it.status} />
                       </span>
                     )}
                   </div>

@@ -1,4 +1,4 @@
--- Documents table RLS and storage bucket assertions (migration 0004).
+-- Documents table RLS and storage bucket assertions (migration 0005).
 -- Run with: pnpm db:test  (wraps `supabase test db`, which uses pgTAP).
 -- Everything runs inside a single transaction that is rolled back at the end.
 
@@ -34,7 +34,7 @@ update public.profiles set role = 'agent' where id = '99999999-9999-4999-8999-99
 update public.profiles set role = 'manager', is_active = false
 where id = '99999999-9999-4999-8999-999999999993';
 
-insert into public.documents (id, contact_id, kind, storage_path)
+insert into public.documents (id, client_id, kind, storage_path)
 values ('88888888-8888-4888-8888-888888888881', null, 'other', 'general/other-1-fixture.pdf');
 
 -- The private bucket the app uploads into must exist.

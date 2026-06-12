@@ -1,22 +1,22 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AgencyStatus, AgentStatus, ContactStatus } from "@/lib/domain/enums";
+import type { AgencyStatus, AgentStatus, ClientStatus } from "@/lib/domain/enums";
 import type { NotificationType } from "@/lib/domain/notifications";
 import type {
   AgencyInput,
   AgencyUpdate,
   AgentInput,
   AgentUpdate,
-  ContactInput,
-  ContactUpdate,
+  ClientInput,
+  ClientUpdate,
   DocumentInput,
   ProfileUpdate,
 } from "@/lib/domain/schemas";
 import { createClient } from "@/lib/supabase/client";
 import * as agenciesApi from "./agencies";
 import * as agentsApi from "./agents";
-import * as contactsApi from "./contacts";
+import * as clientsApi from "./clients";
 import * as documentsApi from "./documents";
 import * as notificationPreferencesApi from "./notification-preferences";
 import * as notificationsApi from "./notifications";
@@ -148,63 +148,71 @@ export function useDeleteAgent() {
   });
 }
 
-/* ------------------------------------------------------------- contacts --- */
-/* EXAMPLE ENTITY — safe to delete; see README "Removing the example entity".
- * One section per entity: list/detail queries plus mutations that invalidate
+/* -------------------------------------------------------------- clients --- */
+/* One section per entity: list/detail queries plus mutations that invalidate
  * the entity's whole key family (lists, details, and dashboards refresh
  * together — that breadth is intentional). */
-export function useContacts() {
+export function useClients() {
   const supabase = createClient();
   return useQuery({
-    queryKey: queryKeys.contacts.lists(),
-    queryFn: () => contactsApi.listContacts(supabase),
+    queryKey: queryKeys.clients.lists(),
+    queryFn: () => clientsApi.listClients(supabase),
   });
 }
 
-export function useContact(id: string) {
+export function useClient(id: string) {
   const supabase = createClient();
   return useQuery({
-    queryKey: queryKeys.contacts.detail(id),
-    queryFn: () => contactsApi.getContact(supabase, id),
+    queryKey: queryKeys.clients.detail(id),
+    queryFn: () => clientsApi.getClient(supabase, id),
     enabled: Boolean(id),
   });
 }
 
-export function useCreateContact() {
+export function useClientsByAgent(agentId: string) {
   const supabase = createClient();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: ContactInput) => contactsApi.createContact(supabase, input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.contacts.all }),
+  return useQuery({
+    queryKey: queryKeys.clients.byAgent(agentId),
+    queryFn: () => clientsApi.listClientsByAgent(supabase, agentId),
+    enabled: Boolean(agentId),
   });
 }
 
-export function useUpdateContact() {
+export function useCreateClient() {
   const supabase = createClient();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: ContactUpdate }) =>
-      contactsApi.updateContact(supabase, id, patch),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.contacts.all }),
+    mutationFn: (input: ClientInput) => clientsApi.createClient(supabase, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.clients.all }),
   });
 }
 
-export function useUpdateContactStatus() {
+export function useUpdateClient() {
   const supabase = createClient();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: ContactStatus }) =>
-      contactsApi.updateContactStatus(supabase, id, status),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.contacts.all }),
+    mutationFn: ({ id, patch }: { id: string; patch: ClientUpdate }) =>
+      clientsApi.updateClient(supabase, id, patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.clients.all }),
   });
 }
 
-export function useDeleteContact() {
+export function useUpdateClientStatus() {
   const supabase = createClient();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => contactsApi.deleteContact(supabase, id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.contacts.all }),
+    mutationFn: ({ id, status }: { id: string; status: ClientStatus }) =>
+      clientsApi.updateClientStatus(supabase, id, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.clients.all }),
+  });
+}
+
+export function useDeleteClient() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => clientsApi.deleteClient(supabase, id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.clients.all }),
   });
 }
 
@@ -217,12 +225,12 @@ export function useDocuments() {
   });
 }
 
-export function useDocumentsByContact(contactId: string) {
+export function useDocumentsByClient(clientId: string) {
   const supabase = createClient();
   return useQuery({
-    queryKey: queryKeys.documents.byContact(contactId),
-    queryFn: () => documentsApi.listDocumentsByContact(supabase, contactId),
-    enabled: Boolean(contactId),
+    queryKey: queryKeys.documents.byClient(clientId),
+    queryFn: () => documentsApi.listDocumentsByClient(supabase, clientId),
+    enabled: Boolean(clientId),
   });
 }
 

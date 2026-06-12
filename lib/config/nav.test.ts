@@ -5,7 +5,7 @@ describe("NAV_GROUPS", () => {
   it("contains the core workspace and admin destinations", () => {
     const hrefs = NAV_GROUPS.flatMap((g) => g.items.map((it) => it.href));
     expect(hrefs).toContain("/");
-    expect(hrefs).toContain("/contacts");
+    expect(hrefs).toContain("/clients");
     expect(hrefs).toContain("/documents");
     expect(hrefs).toContain("/settings/users");
   });
@@ -14,7 +14,7 @@ describe("NAV_GROUPS", () => {
 describe("pageTitleFor", () => {
   it("resolves nav labels for exact paths", () => {
     expect(pageTitleFor("/")).toBe("Dashboard");
-    expect(pageTitleFor("/contacts")).toBe("Contacts");
+    expect(pageTitleFor("/clients")).toBe("Clients");
   });
 
   it("applies title overrides", () => {
@@ -23,7 +23,7 @@ describe("pageTitleFor", () => {
   });
 
   it("falls back to the root segment for detail routes", () => {
-    expect(pageTitleFor("/contacts/abc-123")).toBe("Contacts");
+    expect(pageTitleFor("/clients/abc-123")).toBe("Clients");
   });
 
   it("falls back to the raw segment for unknown routes", () => {

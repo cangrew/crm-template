@@ -7,7 +7,7 @@ export const DOCUMENTS_BUCKET = "documents";
 /**
  * Build a unique, sanitized object path for a document within the bucket:
  * `<prefix>/<kind>-<timestamp>-<safe-name>`, where the prefix is the owning
- * contact's id or "general" for standalone documents. The timestamp keeps
+ * client's id or "general" for standalone documents. The timestamp keeps
  * repeat uploads of the same file name from colliding.
  */
 export function documentStoragePath(
@@ -34,11 +34,11 @@ export async function listDocuments(supabase: TypedSupabaseClient): Promise<Docu
   return data ?? [];
 }
 
-export async function listDocumentsByContact(
+export async function listDocumentsByClient(
   supabase: TypedSupabaseClient,
-  contactId: string,
+  clientId: string,
 ): Promise<DocumentRow[]> {
-  const { data, error } = await supabase.from("documents").select("*").eq("contact_id", contactId);
+  const { data, error } = await supabase.from("documents").select("*").eq("client_id", clientId);
   if (error) throw error;
   return data ?? [];
 }

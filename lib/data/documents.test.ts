@@ -3,7 +3,7 @@ import type { TypedSupabaseClient } from "@/lib/supabase/types";
 import { documentStoragePath, getDocument } from "./documents";
 
 /**
- * Minimal chainable Supabase query-builder stub (mirrors contacts.test.ts):
+ * Minimal chainable Supabase query-builder stub (mirrors clients.test.ts):
  * every builder method returns the builder; awaiting it or calling .single()
  * resolves the canned result.
  */
@@ -21,7 +21,7 @@ function stubClient(result: { data: unknown; error: unknown }) {
 
 describe("documents api", () => {
   it("getDocument returns a single row from the documents table", async () => {
-    const row = { id: "d1", contact_id: "c1", kind: "contract", storage_path: "c1/contract.pdf" };
+    const row = { id: "d1", client_id: "c1", kind: "contract", storage_path: "c1/contract.pdf" };
     const { client, from } = stubClient({ data: row, error: null });
     await expect(getDocument(client, "d1")).resolves.toEqual(row);
     expect(from).toHaveBeenCalledWith("documents");
@@ -35,8 +35,8 @@ describe("documents api", () => {
 
 describe("documentStoragePath", () => {
   it("namespaces the object under its prefix and tags it with kind and timestamp", () => {
-    const path = documentStoragePath("contact-1", "contract", "Agreement.pdf", 1700);
-    expect(path).toBe("contact-1/contract-1700-agreement.pdf");
+    const path = documentStoragePath("client-1", "contract", "Agreement.pdf", 1700);
+    expect(path).toBe("client-1/contract-1700-agreement.pdf");
   });
 
   it("sanitizes whitespace and unsafe characters in the file name", () => {

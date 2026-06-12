@@ -8,7 +8,7 @@ import { Dropzone, FileCard } from "@/components/ui/dropzone";
 import { useToast } from "@/components/ui/toast";
 import { documentStoragePath } from "@/lib/data/documents";
 import {
-  useContacts,
+  useClients,
   useCreateDocument,
   useCurrentProfile,
   useSignedUpload,
@@ -26,28 +26,28 @@ const ACCEPT = "application/pdf,image/png,image/jpeg";
 export function UploadDocumentModal({
   open,
   onClose,
-  defaultContactId,
+  defaultClientId,
 }: {
   open: boolean;
   onClose: () => void;
-  defaultContactId?: string;
+  defaultClientId?: string;
 }) {
   const toast = useToast();
-  const contactsQ = useContacts();
+  const clientsQ = useClients();
   const profileQ = useCurrentProfile();
   const signedUpload = useSignedUpload();
   const createDocument = useCreateDocument();
 
-  const [contactId, setContactId] = useState(defaultContactId ?? "");
+  const [clientId, setClientId] = useState(defaultClientId ?? "");
   const [kind, setKind] = useState<DocumentKind>("contract");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const contacts = contactsQ.data ?? [];
+  const clients = clientsQ.data ?? [];
   const pending = signedUpload.isPending || createDocument.isPending;
 
   function reset() {
-    setContactId(defaultContactId ?? "");
+    setClientId(defaultClientId ?? "");
     setKind("contract");
     setFile(null);
     setError(null);
@@ -62,11 +62,11 @@ export function UploadDocumentModal({
     if (!file) return setError("Choose a file to upload.");
     setError(null);
 
-    const path = documentStoragePath(contactId || "general", kind, file.name);
+    const path = documentStoragePath(clientId || "general", kind, file.name);
     try {
       await signedUpload.mutateAsync({ path, file });
       await createDocument.mutateAsync({
-        contact_id: contactId || null,
+        client_id: clientId || null,
         kind,
         storage_path: path,
         uploaded_by: profileQ.data?.id,
@@ -95,12 +95,12 @@ export function UploadDocumentModal({
         </div>
       )}
 
-      <Field label="Contact (optional)">
-        <Select value={contactId} onChange={(e) => setContactId(e.target.value)}>
-          <option value="">No linked contact</option>
-          {contacts.map((c) => (
+      <Field label="Client (optional)">
+        <Select value={clientId} onChange={(e) => setClientId(e.target.value)}>
+          <option value="">No linked client</option>
+          {clients.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.name + (c.company ? ` · ${c.company}` : "")}
+              {`${c.first_name} ${c.last_name}`}
             </option>
           ))}
         </Select>
@@ -128,7 +128,7 @@ export function UploadDocumentModal({
       )}
 
       <p className="text-ink-500 m-0 text-[12.5px]">
-        Files are stored privately; downloads are brokered through signed URLs. Linking a contact
+        Files are stored privately; downloads are brokered through signed URLs. Linking a client
         scopes the document to their record.
       </p>
     </FormModal>

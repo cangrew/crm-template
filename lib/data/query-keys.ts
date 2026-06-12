@@ -1,7 +1,7 @@
 /**
  * Centralized TanStack Query key factory. Keeps cache keys consistent between
  * queries and the mutations that invalidate them. Add a key family here for
- * every new entity (see `contacts` for the canonical shape).
+ * every new entity (see `clients` for the canonical shape).
  */
 export const queryKeys = {
   agencies: {
@@ -15,14 +15,15 @@ export const queryKeys = {
     detail: (id: string) => ["agents", "detail", id] as const,
     byAgency: (agencyId: string) => ["agents", "byAgency", agencyId] as const,
   },
-  contacts: {
-    all: ["contacts"] as const,
-    lists: () => ["contacts", "list"] as const,
-    detail: (id: string) => ["contacts", "detail", id] as const,
+  clients: {
+    all: ["clients"] as const,
+    lists: () => ["clients", "list"] as const,
+    detail: (id: string) => ["clients", "detail", id] as const,
+    byAgent: (agentId: string) => ["clients", "byAgent", agentId] as const,
   },
   documents: {
     all: ["documents"] as const,
-    byContact: (contactId: string) => ["documents", "byContact", contactId] as const,
+    byClient: (clientId: string) => ["documents", "byClient", clientId] as const,
   },
   profiles: {
     all: ["profiles"] as const,

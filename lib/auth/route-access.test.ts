@@ -6,7 +6,7 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/login")).toBe(true);
     expect(isPublicPath("/auth/callback")).toBe(true);
     expect(isPublicPath("/")).toBe(false);
-    expect(isPublicPath("/contacts")).toBe(false);
+    expect(isPublicPath("/clients")).toBe(false);
   });
 });
 
@@ -40,7 +40,7 @@ describe("canAccessPath", () => {
   it("allows shared workspace pages to every role", () => {
     for (const role of ["admin", "manager", "agent", "agency_owner"] as const) {
       expect(canAccessPath("/", role)).toBe(true);
-      expect(canAccessPath("/contacts", role)).toBe(true);
+      expect(canAccessPath("/clients", role)).toBe(true);
       expect(canAccessPath("/documents", role)).toBe(true);
       expect(canAccessPath("/account", role)).toBe(true);
     }
@@ -53,7 +53,7 @@ describe("canAccessPath", () => {
 
 describe("resolveAuthRedirect", () => {
   it("sends unauthenticated users on protected routes to /login", () => {
-    expect(resolveAuthRedirect({ pathname: "/contacts", isAuthenticated: false, role: null })).toBe(
+    expect(resolveAuthRedirect({ pathname: "/clients", isAuthenticated: false, role: null })).toBe(
       "/login",
     );
   });
@@ -94,7 +94,7 @@ describe("resolveAuthRedirect", () => {
       resolveAuthRedirect({ pathname: "/settings/users", isAuthenticated: true, role: "admin" }),
     ).toBeNull();
     expect(
-      resolveAuthRedirect({ pathname: "/contacts", isAuthenticated: true, role: "agent" }),
+      resolveAuthRedirect({ pathname: "/clients", isAuthenticated: true, role: "agent" }),
     ).toBeNull();
     expect(
       resolveAuthRedirect({ pathname: "/documents", isAuthenticated: true, role: "manager" }),
@@ -105,7 +105,7 @@ describe("resolveAuthRedirect", () => {
   });
 
   it("sends an authenticated user with no role to the pending screen", () => {
-    expect(resolveAuthRedirect({ pathname: "/contacts", isAuthenticated: true, role: null })).toBe(
+    expect(resolveAuthRedirect({ pathname: "/clients", isAuthenticated: true, role: null })).toBe(
       PENDING_PATH,
     );
     expect(

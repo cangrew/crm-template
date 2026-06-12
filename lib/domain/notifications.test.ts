@@ -35,27 +35,34 @@ describe("notification domain metadata", () => {
     }
   });
 
-  it("flags at-risk events as high priority", () => {
-    expect(notificationPriority("contact_at_risk")).toBe("high");
+  it("flags lapses and unmatched lines as high priority", () => {
+    expect(notificationPriority("policy_lapsed")).toBe("high");
+    expect(notificationPriority("lines_unmatched")).toBe("high");
   });
 
   it("treats routine lifecycle events as normal priority", () => {
-    expect(notificationPriority("contact_created")).toBe("normal");
-    expect(notificationPriority("contact_closed")).toBe("normal");
+    expect(notificationPriority("client_created")).toBe("normal");
+    expect(notificationPriority("statement_posted")).toBe("normal");
+    expect(notificationPriority("payout_finalized")).toBe("normal");
   });
 });
 
 describe("notificationEntityType", () => {
-  it("maps contact events to the contact entity", () => {
-    for (const type of NOTIFICATION_TYPES) {
-      expect(notificationEntityType(type)).toBe("contact");
-    }
+  it("maps each type to its entity", () => {
+    expect(notificationEntityType("client_created")).toBe("client");
+    expect(notificationEntityType("policy_lapsed")).toBe("policy");
+    expect(notificationEntityType("statement_posted")).toBe("statement");
+    expect(notificationEntityType("lines_unmatched")).toBe("statement");
+    expect(notificationEntityType("payout_finalized")).toBe("payout");
   });
 });
 
 describe("notificationHref", () => {
-  it("links contact notifications to the contact detail route", () => {
-    expect(notificationHref("contact", "abc-123")).toBe("/contacts/abc-123");
+  it("links each entity type to its detail route", () => {
+    expect(notificationHref("client", "abc-123")).toBe("/clients/abc-123");
+    expect(notificationHref("policy", "p-1")).toBe("/policies/p-1");
+    expect(notificationHref("statement", "s-1")).toBe("/statements/s-1");
+    expect(notificationHref("payout", "y-1")).toBe("/payouts/y-1");
   });
 });
 
@@ -72,16 +79,22 @@ describe("typesForRole", () => {
     expect(typesForRole("admin").sort()).toEqual([...NOTIFICATION_TYPES].sort());
   });
 
-  it("excludes escalation events from the tenant role lists", () => {
+  it("limits tenant roles to payout notifications (no other-book leakage)", () => {
     for (const role of ["agent", "agency_owner"] as const) {
       const types: NotificationType[] = typesForRole(role);
-      expect(types).not.toContain("contact_at_risk");
-      expect(types).not.toContain("contact_closed");
-      expect(types).toContain("contact_created");
+      expect(types).toEqual(["payout_finalized"]);
+      expect(types).not.toContain("client_created");
     }
   });
 
-  it("excludes admin-only closure events from the manager list", () => {
-    expect(typesForRole("manager")).not.toContain("contact_closed");
+  it("keeps staff-only operational events with admins and managers", () => {
+    for (const type of [
+      "client_created",
+      "policy_lapsed",
+      "statement_posted",
+      "lines_unmatched",
+    ] as const) {
+      expect(notificationAudience(type)).toEqual(["admin", "manager"]);
+    }
   });
 });

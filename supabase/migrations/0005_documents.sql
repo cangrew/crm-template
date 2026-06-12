@@ -1,21 +1,19 @@
--- CRM Template — documents library with private Storage bucket.
--- Documents may stand alone (contact_id null) or attach to a contact (the
--- example entity). When you remove the example, drop the contact_id FK and
--- re-point it at your real entity.
+-- Findway — documents library with private Storage bucket.
+-- Documents may stand alone (client_id null) or attach to a client record.
 
 -- ---------------------------------------------------------------------------
 -- Table
 -- ---------------------------------------------------------------------------
 create table public.documents (
   id uuid primary key default gen_random_uuid(),
-  contact_id uuid references public.contacts (id) on delete cascade,
+  client_id uuid references public.clients (id) on delete cascade,
   kind text not null,
   storage_path text not null,
   uploaded_by uuid references public.profiles (id) on delete set null,
   created_at timestamptz not null default now()
 );
 
-create index idx_documents_contact on public.documents (contact_id);
+create index idx_documents_client on public.documents (client_id);
 
 -- ---------------------------------------------------------------------------
 -- Row-Level Security: every active role reads; admin & manager manage.

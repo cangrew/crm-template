@@ -3,7 +3,7 @@ import { can, isAdmin, isStaff } from "./roles";
 
 describe("can() permission matrix", () => {
   it("grants admins full CRUD on every resource", () => {
-    for (const resource of ["contacts", "documents", "users", "agents", "agencies"] as const) {
+    for (const resource of ["clients", "documents", "users", "agents", "agencies"] as const) {
       for (const action of ["create", "read", "update", "delete"] as const) {
         expect(can("admin", action, resource)).toBe(true);
       }
@@ -11,10 +11,10 @@ describe("can() permission matrix", () => {
   });
 
   it("lets managers run records but not delete them or manage users", () => {
-    expect(can("manager", "create", "contacts")).toBe(true);
-    expect(can("manager", "read", "contacts")).toBe(true);
-    expect(can("manager", "update", "contacts")).toBe(true);
-    expect(can("manager", "delete", "contacts")).toBe(false);
+    expect(can("manager", "create", "clients")).toBe(true);
+    expect(can("manager", "read", "clients")).toBe(true);
+    expect(can("manager", "update", "clients")).toBe(true);
+    expect(can("manager", "delete", "clients")).toBe(false);
     expect(can("manager", "create", "documents")).toBe(true);
     expect(can("manager", "delete", "documents")).toBe(true);
     expect(can("manager", "create", "agents")).toBe(true);
@@ -26,11 +26,11 @@ describe("can() permission matrix", () => {
   });
 
   it("limits agents to read-only access on their book", () => {
-    expect(can("agent", "read", "contacts")).toBe(true);
+    expect(can("agent", "read", "clients")).toBe(true);
     expect(can("agent", "read", "documents")).toBe(true);
     expect(can("agent", "read", "agents")).toBe(true);
     expect(can("agent", "read", "agencies")).toBe(false);
-    for (const resource of ["contacts", "documents", "users", "agents", "agencies"] as const) {
+    for (const resource of ["clients", "documents", "users", "agents", "agencies"] as const) {
       for (const action of ["create", "update", "delete"] as const) {
         expect(can("agent", action, resource)).toBe(false);
       }
@@ -39,11 +39,11 @@ describe("can() permission matrix", () => {
   });
 
   it("limits agency owners to read-only access on their agency's book", () => {
-    expect(can("agency_owner", "read", "contacts")).toBe(true);
+    expect(can("agency_owner", "read", "clients")).toBe(true);
     expect(can("agency_owner", "read", "documents")).toBe(true);
     expect(can("agency_owner", "read", "agents")).toBe(true);
     expect(can("agency_owner", "read", "agencies")).toBe(true);
-    for (const resource of ["contacts", "documents", "users", "agents", "agencies"] as const) {
+    for (const resource of ["clients", "documents", "users", "agents", "agencies"] as const) {
       for (const action of ["create", "update", "delete"] as const) {
         expect(can("agency_owner", action, resource)).toBe(false);
       }

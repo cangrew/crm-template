@@ -128,46 +128,62 @@ export type Database = {
           },
         ];
       };
-      contacts: {
+      clients: {
         Row: {
-          company: string | null;
+          address: string | null;
+          agent_id: string | null;
           created_at: string;
           created_by: string | null;
+          dob: string | null;
           email: string | null;
+          first_name: string;
           id: string;
-          name: string;
+          last_name: string;
           notes: string | null;
           phone: string | null;
-          status: Database["public"]["Enums"]["contact_status"];
+          status: Database["public"]["Enums"]["client_status"];
           updated_at: string;
         };
         Insert: {
-          company?: string | null;
+          address?: string | null;
+          agent_id?: string | null;
           created_at?: string;
           created_by?: string | null;
+          dob?: string | null;
           email?: string | null;
+          first_name: string;
           id?: string;
-          name: string;
+          last_name: string;
           notes?: string | null;
           phone?: string | null;
-          status?: Database["public"]["Enums"]["contact_status"];
+          status?: Database["public"]["Enums"]["client_status"];
           updated_at?: string;
         };
         Update: {
-          company?: string | null;
+          address?: string | null;
+          agent_id?: string | null;
           created_at?: string;
           created_by?: string | null;
+          dob?: string | null;
           email?: string | null;
+          first_name?: string;
           id?: string;
-          name?: string;
+          last_name?: string;
           notes?: string | null;
           phone?: string | null;
-          status?: Database["public"]["Enums"]["contact_status"];
+          status?: Database["public"]["Enums"]["client_status"];
           updated_at?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "contacts_created_by_fkey";
+            foreignKeyName: "clients_agent_id_fkey";
+            columns: ["agent_id"];
+            isOneToOne: false;
+            referencedRelation: "agents";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "clients_created_by_fkey";
             columns: ["created_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
@@ -177,7 +193,7 @@ export type Database = {
       };
       documents: {
         Row: {
-          contact_id: string | null;
+          client_id: string | null;
           created_at: string;
           id: string;
           kind: string;
@@ -185,7 +201,7 @@ export type Database = {
           uploaded_by: string | null;
         };
         Insert: {
-          contact_id?: string | null;
+          client_id?: string | null;
           created_at?: string;
           id?: string;
           kind: string;
@@ -193,7 +209,7 @@ export type Database = {
           uploaded_by?: string | null;
         };
         Update: {
-          contact_id?: string | null;
+          client_id?: string | null;
           created_at?: string;
           id?: string;
           kind?: string;
@@ -202,10 +218,10 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "documents_contact_id_fkey";
-            columns: ["contact_id"];
+            foreignKeyName: "documents_client_id_fkey";
+            columns: ["client_id"];
             isOneToOne: false;
-            referencedRelation: "contacts";
+            referencedRelation: "clients";
             referencedColumns: ["id"];
           },
           {
@@ -366,9 +382,14 @@ export type Database = {
       agency_status: "active" | "inactive";
       agent_status: "active" | "inactive" | "terminated";
       app_role: "admin" | "manager" | "agent" | "agency_owner";
-      contact_status: "lead" | "active" | "at_risk" | "closed";
+      client_status: "prospect" | "active" | "inactive";
       notification_priority: "normal" | "high";
-      notification_type: "contact_created" | "contact_at_risk" | "contact_closed";
+      notification_type:
+        | "client_created"
+        | "policy_lapsed"
+        | "statement_posted"
+        | "lines_unmatched"
+        | "payout_finalized";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -500,9 +521,15 @@ export const Constants = {
       agency_status: ["active", "inactive"],
       agent_status: ["active", "inactive", "terminated"],
       app_role: ["admin", "manager", "agent", "agency_owner"],
-      contact_status: ["lead", "active", "at_risk", "closed"],
+      client_status: ["prospect", "active", "inactive"],
       notification_priority: ["normal", "high"],
-      notification_type: ["contact_created", "contact_at_risk", "contact_closed"],
+      notification_type: [
+        "client_created",
+        "policy_lapsed",
+        "statement_posted",
+        "lines_unmatched",
+        "payout_finalized",
+      ],
     },
   },
 } as const;

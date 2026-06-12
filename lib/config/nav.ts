@@ -28,8 +28,7 @@ export const NAV_GROUPS: NavGroup[] = [
     group: "Workspace",
     items: [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
-      // EXAMPLE ENTITY — safe to delete; see README "Removing the example entity".
-      { href: "/contacts", label: "Contacts", icon: BookUser },
+      { href: "/clients", label: "Clients", icon: BookUser },
       { href: "/documents", label: "Documents", icon: FileText },
     ],
   },

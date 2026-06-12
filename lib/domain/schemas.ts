@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AGENCY_STATUSES, AGENT_STATUSES, APP_ROLES, CONTACT_STATUSES } from "./enums";
+import { AGENCY_STATUSES, AGENT_STATUSES, APP_ROLES, CLIENT_STATUSES } from "./enums";
 
 export const DOCUMENT_KINDS = ["contract", "invoice", "other"] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
@@ -81,33 +81,38 @@ export const agentUpdateSchema = z
   })
   .partial();
 
-/* contacts — EXAMPLE ENTITY, safe to delete; see README "Removing the example
- * entity". The insert/update pair is the pattern every entity follows: inserts
- * apply defaults, updates are fully partial patches with nullable clears. */
-export const contactInsertSchema = z.object({
-  name: nonEmpty,
-  company: z.string().trim().nullable().optional(),
+/* clients — policyholders. Inserts apply defaults, updates are fully partial
+ * patches with nullable clears. */
+export const clientInsertSchema = z.object({
+  first_name: nonEmpty,
+  last_name: nonEmpty,
+  dob: z.iso.date().nullable().optional(),
   email: z.email().nullable().optional(),
   phone: z.string().trim().nullable().optional(),
-  status: z.enum(CONTACT_STATUSES).default("lead"),
+  address: z.string().trim().nullable().optional(),
+  status: z.enum(CLIENT_STATUSES).default("prospect"),
+  agent_id: uuid.nullable().optional(),
   notes: z.string().trim().optional(),
 });
 
-export const contactUpdateSchema = z
+export const clientUpdateSchema = z
   .object({
-    name: nonEmpty,
-    company: z.string().trim().nullable(),
+    first_name: nonEmpty,
+    last_name: nonEmpty,
+    dob: z.iso.date().nullable(),
     email: z.email().nullable(),
     phone: z.string().trim().nullable(),
-    status: z.enum(CONTACT_STATUSES),
+    address: z.string().trim().nullable(),
+    status: z.enum(CLIENT_STATUSES),
+    agent_id: uuid.nullable(),
     notes: z.string().trim().nullable(),
   })
   .partial();
 
 /* documents */
 export const documentInsertSchema = z.object({
-  // Documents can stand alone or attach to a contact (the example entity).
-  contact_id: uuid.nullable().optional(),
+  // Documents can stand alone or attach to a client record.
+  client_id: uuid.nullable().optional(),
   kind: z.enum(DOCUMENT_KINDS),
   storage_path: nonEmpty,
   uploaded_by: uuid.optional(),
@@ -119,6 +124,6 @@ export type AgencyInput = z.infer<typeof agencyInsertSchema>;
 export type AgencyUpdate = z.infer<typeof agencyUpdateSchema>;
 export type AgentInput = z.infer<typeof agentInsertSchema>;
 export type AgentUpdate = z.infer<typeof agentUpdateSchema>;
-export type ContactInput = z.infer<typeof contactInsertSchema>;
-export type ContactUpdate = z.infer<typeof contactUpdateSchema>;
+export type ClientInput = z.infer<typeof clientInsertSchema>;
+export type ClientUpdate = z.infer<typeof clientUpdateSchema>;
 export type DocumentInput = z.infer<typeof documentInsertSchema>;

@@ -10,7 +10,7 @@ const { uploadMutate, createMutate } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/data/hooks", () => ({
-  useContacts: () => ({ data: [{ id: "c1", name: "Ada Lovelace", company: "Analytical" }] }),
+  useClients: () => ({ data: [{ id: "c1", first_name: "Ada", last_name: "Lovelace" }] }),
   useCurrentProfile: () => ({ data: { id: "u1" } }),
   useSignedUpload: () => ({ mutateAsync: uploadMutate, isPending: false }),
   useCreateDocument: () => ({ mutateAsync: createMutate, isPending: false }),
@@ -58,7 +58,7 @@ describe("UploadDocumentModal", () => {
     );
     expect(createMutate).toHaveBeenCalledWith(
       expect.objectContaining({
-        contact_id: null,
+        client_id: null,
         kind: "contract",
         uploaded_by: "u1",
       }),
@@ -66,7 +66,7 @@ describe("UploadDocumentModal", () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
-  it("records the linked contact and scopes the path to it", async () => {
+  it("records the linked client and scopes the path to it", async () => {
     renderModal(<UploadDocumentModal open onClose={() => {}} />);
 
     fireEvent.change(screen.getAllByRole("combobox")[0], { target: { value: "c1" } });
@@ -80,6 +80,6 @@ describe("UploadDocumentModal", () => {
         path: expect.stringMatching(/^c1\/contract-\d+-agreement\.pdf$/),
       }),
     );
-    expect(createMutate).toHaveBeenCalledWith(expect.objectContaining({ contact_id: "c1" }));
+    expect(createMutate).toHaveBeenCalledWith(expect.objectContaining({ client_id: "c1" }));
   });
 });

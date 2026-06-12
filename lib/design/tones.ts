@@ -1,4 +1,4 @@
-import type { AgencyStatus, AgentStatus, ContactStatus } from "@/lib/domain/enums";
+import type { AgencyStatus, AgentStatus, ClientStatus } from "@/lib/domain/enums";
 
 /** Badge tone tokens (see components/ui/badge.tsx). */
 export type Tone =
@@ -13,14 +13,12 @@ export type Tone =
   | "t-violet"
   | "t-green-solid";
 
-/* EXAMPLE ENTITY (contacts) — safe to delete; see README "Removing the example
- * entity". Each status enum gets a tone map so badges, pickers, and filter
- * bars stay visually consistent. */
-export const contactTone: Record<ContactStatus, Tone> = {
-  lead: "t-amber",
+/* Each status enum gets a tone map so badges, pickers, and filter bars stay
+ * visually consistent. */
+export const clientTone: Record<ClientStatus, Tone> = {
+  prospect: "t-amber",
   active: "t-green",
-  at_risk: "t-red",
-  closed: "t-slate",
+  inactive: "t-slate",
 };
 
 export const agencyTone: Record<AgencyStatus, Tone> = {

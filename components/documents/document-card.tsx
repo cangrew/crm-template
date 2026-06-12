@@ -63,9 +63,9 @@ export function DocumentCard({ doc }: { doc: DocumentRow }) {
           <Download size={14} />
           {download.isPending ? "Opening…" : "Download"}
         </button>
-        {doc.contact_id && (
-          <Link href={`/contacts/${doc.contact_id}`} className="btn btn-outline btn-sm flex-1">
-            Open contact
+        {doc.client_id && (
+          <Link href={`/clients/${doc.client_id}`} className="btn btn-outline btn-sm flex-1">
+            Open client
           </Link>
         )}
       </div>

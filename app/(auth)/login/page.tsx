@@ -107,7 +107,7 @@ export default function LoginPage() {
             </span>
           </div>
           <p className="mt-5 text-[15px] leading-[1.6] text-white/70">
-            Contacts, documents and the people who manage them — tracked end to end with role-based
+            Clients, documents and the people who manage them — tracked end to end with role-based
             access for the whole team.
           </p>
         </div>

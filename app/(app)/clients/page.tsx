@@ -1,81 +1,81 @@
 "use client";
 import { Table } from "@/components/ui/table";
 
-/* EXAMPLE ENTITY — safe to delete; see README "Removing the example entity".
- * List-page pattern: PageHeader + filter bar + table + skeleton/empty/error
+/* List-page pattern: PageHeader + filter bar + table + skeleton/empty/error
  * states, with write affordances gated through can(). */
 import { BookUser, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
-import { ContactsFilterBar } from "@/components/contacts/contacts-filter-bar";
-import { ContactsTable } from "@/components/contacts/contacts-table";
-import { NewContactModal } from "@/components/contacts/new-contact-modal";
+import { ClientsFilterBar } from "@/components/clients/clients-filter-bar";
+import { ClientsTable } from "@/components/clients/clients-table";
+import { NewClientModal } from "@/components/clients/new-client-modal";
 import { PageErrorState } from "@/components/common/page-states";
 import { PageHeader } from "@/components/common/page-header";
 import { Btn } from "@/components/ui/btn";
 import { EmptyState, TableSkeleton } from "@/components/ui/states";
 import { can } from "@/lib/auth/roles";
-import { useContacts, useCurrentProfile } from "@/lib/data/hooks";
-import { type ContactStatus } from "@/lib/domain/enums";
+import { useAgents, useClients, useCurrentProfile } from "@/lib/data/hooks";
+import { type ClientStatus } from "@/lib/domain/enums";
 
-export default function ContactsPage() {
-  const contactsQ = useContacts();
+export default function ClientsPage() {
+  const clientsQ = useClients();
+  const agentsQ = useAgents();
   const profileQ = useCurrentProfile();
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState<"" | ContactStatus>("");
+  const [status, setStatus] = useState<"" | ClientStatus>("");
   const [addOpen, setAddOpen] = useState(false);
 
   const role = profileQ.data?.role ?? null;
-  const canCreate = role != null && can(role, "create", "contacts");
-  const canUpdate = role != null && can(role, "update", "contacts");
+  const canCreate = role != null && can(role, "create", "clients");
+  const canUpdate = role != null && can(role, "update", "clients");
 
-  const contacts = contactsQ.data;
+  const clients = clientsQ.data;
 
   const filtered = useMemo(() => {
     const ql = q.toLowerCase();
-    return (contacts ?? []).filter((c) => {
+    return (clients ?? []).filter((c) => {
       if (
         ql &&
         !(
-          c.name.toLowerCase().includes(ql) ||
-          (c.company ?? "").toLowerCase().includes(ql) ||
-          (c.email ?? "").toLowerCase().includes(ql)
+          `${c.first_name} ${c.last_name}`.toLowerCase().includes(ql) ||
+          (c.email ?? "").toLowerCase().includes(ql) ||
+          (c.phone ?? "").toLowerCase().includes(ql)
         )
       )
         return false;
       if (status && c.status !== status) return false;
       return true;
     });
-  }, [contacts, q, status]);
+  }, [clients, q, status]);
 
-  const all = contacts ?? [];
+  const all = clients ?? [];
   const active = all.filter((c) => c.status === "active").length;
 
-  if (contactsQ.isError) {
-    return <PageErrorState body="Failed to fetch contacts." onRetry={() => contactsQ.refetch()} />;
+  if (clientsQ.isError) {
+    return <PageErrorState body="Failed to fetch clients." onRetry={() => clientsQ.refetch()} />;
   }
 
   return (
     <div className="mx-auto max-w-[1440px] px-8 pt-[26px] pb-20">
       <PageHeader
-        title="Contacts"
+        title="Clients"
         subtitle={`${all.length} total · ${active} active`}
         actions={
           canCreate ? (
             <Btn variant="primary" icon={<Plus size={17} />} onClick={() => setAddOpen(true)}>
-              New Contact
+              New Client
             </Btn>
           ) : undefined
         }
       />
 
-      <ContactsFilterBar q={q} onQ={setQ} status={status} onStatus={setStatus} />
+      <ClientsFilterBar q={q} onQ={setQ} status={status} onStatus={setStatus} />
 
-      {contactsQ.isLoading ? (
+      {clientsQ.isLoading ? (
         <div className="border-border bg-bg rounded-[var(--radius-lg)] border shadow-[var(--shadow-card)]">
           <Table>
             <thead>
               <tr>
-                {["Contact", "Company", "Email", "Phone", "Status"].map((h) => (
+                {["Client", "Agent", "Email", "Phone", "Status"].map((h) => (
                   <th key={h}>{h}</th>
                 ))}
               </tr>
@@ -87,19 +87,19 @@ export default function ContactsPage() {
         <div className="border-border bg-bg rounded-[var(--radius-lg)] border shadow-[var(--shadow-card)]">
           <EmptyState
             icon={BookUser}
-            title={all.length === 0 ? "No contacts yet" : "No contacts match these filters"}
+            title={all.length === 0 ? "No clients yet" : "No clients match these filters"}
             body={
               all.length === 0
-                ? "Add a contact to start tracking relationships."
+                ? "Add a client to start building the book of business."
                 : "Try clearing a filter."
             }
           />
         </div>
       ) : (
-        <ContactsTable rows={filtered} canUpdate={canUpdate} />
+        <ClientsTable rows={filtered} agents={agentsQ.data ?? []} canUpdate={canUpdate} />
       )}
 
-      <NewContactModal open={addOpen} onClose={() => setAddOpen(false)} />
+      <NewClientModal open={addOpen} onClose={() => setAddOpen(false)} />
     </div>
   );
 }

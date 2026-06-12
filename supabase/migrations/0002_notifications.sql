@@ -1,21 +1,23 @@
--- CRM Template — in-app notifications with per-user preferences.
+-- Findway — in-app notifications with per-user preferences.
 -- Server-authoritative: rows are created only by the SECURITY DEFINER
 -- `public.notify_roles` helper, invoked from entity triggers (see
--- 0003_contacts.sql for the example wiring). Recipients are resolved by role
+-- 0004_clients.sql for the wiring). Recipients are resolved by role
 -- (lib/domain/notifications.ts mirrors this routing). Each notification is one
 -- row per recipient user so RLS, unread counts, and realtime filtering stay
 -- trivial.
 
 -- ---------------------------------------------------------------------------
 -- Enums (values mirror NOTIFICATION_TYPES / NOTIFICATION_PRIORITIES in TS).
--- The shipped types are wired to the contacts EXAMPLE ENTITY; rename them
--- here and in lib/domain/notifications.ts when you replace the example with
--- real domains (before your first deploy — enum values are append-only after).
+-- The later values are used by upcoming modules (policies, statements,
+-- payouts); defining them now avoids enum surgery after the first deploy
+-- (enum values are append-only once deployed).
 -- ---------------------------------------------------------------------------
 create type public.notification_type as enum (
-  'contact_created',
-  'contact_at_risk',
-  'contact_closed'
+  'client_created',
+  'policy_lapsed',
+  'statement_posted',
+  'lines_unmatched',
+  'payout_finalized'
 );
 
 create type public.notification_priority as enum ('normal', 'high');
@@ -30,8 +32,8 @@ create table public.notifications (
   priority public.notification_priority not null default 'normal',
   title text not null,
   body text not null default '',
-  -- entity_type names the linked entity ('contact'); entity_id is text so it
-  -- can hold uuid or numeric ids alike.
+  -- entity_type names the linked entity ('client', 'policy', …); entity_id is
+  -- text so it can hold uuid or numeric ids alike.
   entity_type text not null,
   entity_id text not null,
   read_at timestamptz,

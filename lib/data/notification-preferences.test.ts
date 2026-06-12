@@ -15,7 +15,7 @@ function stubClient(result: { data?: unknown; error: unknown }) {
 
 describe("notification preferences api", () => {
   it("listPreferences returns rows for the current user", async () => {
-    const rows = [{ user_id: "u1", type: "contact_created", muted: true }];
+    const rows = [{ user_id: "u1", type: "client_created", muted: true }];
     const { client, from } = stubClient({ data: rows, error: null });
     await expect(listPreferences(client)).resolves.toEqual(rows);
     expect(from).toHaveBeenCalledWith("notification_preferences");
@@ -28,15 +28,15 @@ describe("notification preferences api", () => {
 
   it("setPreference upserts the user/type/muted triple", async () => {
     const { client, builder } = stubClient({ data: null, error: null });
-    await setPreference(client, "u1", "contact_created", true);
+    await setPreference(client, "u1", "client_created", true);
     expect(builder.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ user_id: "u1", type: "contact_created", muted: true }),
+      expect.objectContaining({ user_id: "u1", type: "client_created", muted: true }),
       expect.objectContaining({ onConflict: "user_id,type" }),
     );
   });
 
   it("setPreference throws on error", async () => {
     const { client } = stubClient({ data: null, error: new Error("denied") });
-    await expect(setPreference(client, "u1", "contact_created", false)).rejects.toThrow("denied");
+    await expect(setPreference(client, "u1", "client_created", false)).rejects.toThrow("denied");
   });
 });

@@ -134,7 +134,7 @@ function makeDoc(
     id: string;
     kind: string;
     storage_path: string;
-    contact_id: string | null;
+    client_id: string | null;
     created_at: string;
   }> = {},
 ) {
@@ -142,7 +142,7 @@ function makeDoc(
     id: "doc-1",
     kind: "contract",
     storage_path: "general/contract-123.pdf",
-    contact_id: null,
+    client_id: null,
     created_at: "2026-01-01T00:00:00Z",
     ...overrides,
   };
@@ -254,7 +254,7 @@ describe("DocumentsPage", () => {
 
   it("filters documents by search query matching storage_path", async () => {
     docsData = [
-      makeDoc({ id: "d1", kind: "other", storage_path: "contacts/abc/report.pdf" }),
+      makeDoc({ id: "d1", kind: "other", storage_path: "clients/abc/report.pdf" }),
       makeDoc({ id: "d2", kind: "other", storage_path: "general/budget.pdf" }),
     ];
     render(<DocumentsPage />);

@@ -60,7 +60,7 @@ export function TopBar({ userId, name, email, role }: Props) {
 
         <button type="button" className="search-trigger" onClick={() => setCmdOpen(true)}>
           <Search size={16} />
-          Search contacts, pages…
+          Search clients, pages…
           <kbd>⌘K</kbd>
         </button>
 

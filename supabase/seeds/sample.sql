@@ -1,4 +1,4 @@
--- CRM Template — full sample dataset.
+-- Findway — full sample dataset.
 -- Layered on top of the minimal bootstrap in supabase/seed.sql.
 -- Run via:  pnpm db:reset:sample
 --
@@ -6,12 +6,13 @@
 --   app_role:        Avery admin (seed.sql), Morgan manager, Casey agent,
 --                    Quinn agency owner.
 --   account states:  Riley pending (role null), Drew deactivated agent.
---   contact_status:  every value has at least two representative rows.
+--   client_status:   every value has at least two representative rows; books
+--                    span Casey, Harper, Devon, and unassigned (house).
 --   documents.kind:  contract, invoice, other (paths only; no objects are
 --                    uploaded, so downloads exercise the error-toast path).
---   notifications:   the status updates below fire the contact triggers, so
---                    bells are pre-populated on first sign-in (the superuser
---                    actor is null, which notifies every eligible role).
+--   notifications:   the client inserts below fire the client_created trigger,
+--                    so bells are pre-populated on first sign-in (the superuser
+--                    actor is null, which notifies every eligible staff role).
 
 -- ---------------------------------------------------------------------------
 -- Additional auth users (Avery is already bootstrapped in seed.sql)
@@ -79,34 +80,25 @@ insert into public.agents (id, full_name, email, npn, status, agency_id, commiss
    '20000000-0000-4000-8000-000000000002', 7000, null);
 
 -- ---------------------------------------------------------------------------
--- Contacts (EXAMPLE ENTITY) — every status represented.
+-- Clients — every status represented, spread across the seeded agents
+-- (Casey, Harper, Devon) with a couple unassigned (house) rows. Each insert
+-- fires the client_created notification trigger (staff-only fan-out).
 -- ---------------------------------------------------------------------------
-insert into public.contacts (id, name, company, email, phone, status, notes, created_by) values
-  ('10000000-0000-4000-8000-000000000001', 'Ada Lovelace',    'Analytical Engines Ltd', 'ada@analytical.example',    '+1 555 0101', 'lead',   'Met at the spring expo; wants a follow-up demo.', '00000000-0000-4000-8000-000000000001'),
-  ('10000000-0000-4000-8000-000000000002', 'Grace Hopper',    'Flowmatic Systems',      'grace@flowmatic.example',   '+1 555 0102', 'lead',   null, '00000000-0000-4000-8000-000000000002'),
-  ('10000000-0000-4000-8000-000000000003', 'Alan Turing',     'Bombe Works',            'alan@bombe.example',        '+1 555 0103', 'lead',   'Referred by Ada.', '00000000-0000-4000-8000-000000000002'),
-  ('10000000-0000-4000-8000-000000000004', 'Katherine Johnson', 'Orbital Calc Co',      'katherine@orbital.example', '+1 555 0104', 'active', 'Renewal due Q4.', '00000000-0000-4000-8000-000000000001'),
-  ('10000000-0000-4000-8000-000000000005', 'Margaret Hamilton', 'Apollo Guidance LLC',  'margaret@apollo.example',   '+1 555 0105', 'active', null, '00000000-0000-4000-8000-000000000002'),
-  ('10000000-0000-4000-8000-000000000006', 'Edsger Dijkstra', 'Shortest Path BV',       'edsger@paths.example',      '+31 20 555 0106', 'active', 'Prefers email over calls.', '00000000-0000-4000-8000-000000000001'),
-  ('10000000-0000-4000-8000-000000000007', 'Barbara Liskov',  'Substitution Inc',       'barbara@subst.example',     '+1 555 0107', 'at_risk', 'Support tickets unanswered for two weeks.', '00000000-0000-4000-8000-000000000002'),
-  ('10000000-0000-4000-8000-000000000008', 'Donald Knuth',    'Literate Press',         'don@literate.example',      '+1 555 0108', 'at_risk', 'Evaluating a competitor.', '00000000-0000-4000-8000-000000000001'),
-  ('10000000-0000-4000-8000-000000000009', 'John von Neumann', 'EDVAC Partners',        'john@edvac.example',        '+1 555 0109', 'closed', 'Project completed in March.', '00000000-0000-4000-8000-000000000001'),
-  ('10000000-0000-4000-8000-000000000010', 'Claude Shannon',  'Bit & Boole',            'claude@bitboole.example',   '+1 555 0110', 'closed', null, '00000000-0000-4000-8000-000000000002');
-
--- Exercise the notification triggers so bells have content: re-state two
--- contacts through status updates (the insert fan-outs above already fired).
-update public.contacts set status = 'active'
-  where id = '10000000-0000-4000-8000-000000000006' and status <> 'active';
-update public.contacts set status = 'at_risk'
-  where id = '10000000-0000-4000-8000-000000000007';
-update public.contacts set status = 'closed'
-  where id = '10000000-0000-4000-8000-000000000009';
+insert into public.clients (id, first_name, last_name, dob, email, phone, address, status, agent_id, notes, created_by) values
+  ('10000000-0000-4000-8000-000000000001', 'Maria',  'Alvarez',   '1957-03-14', 'maria.alvarez@example.com',   '+1 555 0101', '210 Palm Ave, Miami, FL',        'active',   '30000000-0000-4000-8000-000000000001', 'Medicare Advantage; renewal due Q4.', '00000000-0000-4000-8000-000000000001'),
+  ('10000000-0000-4000-8000-000000000002', 'James',  'Whitfield', '1949-11-02', 'james.whitfield@example.com', '+1 555 0102', '88 Lakeshore Dr, Tampa, FL',     'active',   '30000000-0000-4000-8000-000000000001', null, '00000000-0000-4000-8000-000000000002'),
+  ('10000000-0000-4000-8000-000000000003', 'Lucia',  'Fernandez', '1962-07-21', 'lucia.fernandez@example.com', '+1 555 0103', '14 Coral Way, Hialeah, FL',      'prospect', '30000000-0000-4000-8000-000000000002', 'Turning 65 in August; follow up before AEP.', '00000000-0000-4000-8000-000000000002'),
+  ('10000000-0000-4000-8000-000000000004', 'Robert', 'Chen',      '1955-01-30', 'robert.chen@example.com',     '+1 555 0104', '501 Bayview St, Orlando, FL',    'active',   '30000000-0000-4000-8000-000000000002', null, '00000000-0000-4000-8000-000000000001'),
+  ('10000000-0000-4000-8000-000000000005', 'Yvonne', 'Baptiste',  '1968-09-09', 'yvonne.baptiste@example.com', '+1 555 0105', '77 Magnolia Ct, Fort Lauderdale, FL', 'prospect', '30000000-0000-4000-8000-000000000003', 'Referred by Maria Alvarez.', '00000000-0000-4000-8000-000000000002'),
+  ('10000000-0000-4000-8000-000000000006', 'Harold', 'Nakamura',  '1946-05-17', 'harold.nakamura@example.com', '+1 555 0106', '3 Seabreeze Ln, Sarasota, FL',   'inactive', '30000000-0000-4000-8000-000000000003', 'Moved out of state; plan terminated.', '00000000-0000-4000-8000-000000000001'),
+  ('10000000-0000-4000-8000-000000000007', 'Denise', 'Okafor',    '1971-12-05', 'denise.okafor@example.com',   '+1 555 0107', '940 Cypress Rd, Jacksonville, FL', 'prospect', null, 'Walk-in lead; not yet assigned to an agent.', '00000000-0000-4000-8000-000000000002'),
+  ('10000000-0000-4000-8000-000000000008', 'Frank',  'Delgado',   '1953-08-26', 'frank.delgado@example.com',   '+1 555 0108', '12 Harbor View Blvd, St. Petersburg, FL', 'inactive', null, 'Lapsed last year; re-engage during AEP.', '00000000-0000-4000-8000-000000000001');
 
 -- ---------------------------------------------------------------------------
 -- Documents — metadata rows only (no storage objects are seeded, so the
 -- download action surfaces the graceful error toast).
 -- ---------------------------------------------------------------------------
-insert into public.documents (contact_id, kind, storage_path, uploaded_by) values
-  ('10000000-0000-4000-8000-000000000004', 'contract', '10000000-0000-4000-8000-000000000004/contract-1700000000000-msa.pdf',     '00000000-0000-4000-8000-000000000001'),
-  ('10000000-0000-4000-8000-000000000004', 'invoice',  '10000000-0000-4000-8000-000000000004/invoice-1700000000001-2026-04.pdf',  '00000000-0000-4000-8000-000000000002'),
+insert into public.documents (client_id, kind, storage_path, uploaded_by) values
+  ('10000000-0000-4000-8000-000000000001', 'contract', '10000000-0000-4000-8000-000000000001/contract-1700000000000-policy.pdf',  '00000000-0000-4000-8000-000000000001'),
+  ('10000000-0000-4000-8000-000000000001', 'invoice',  '10000000-0000-4000-8000-000000000001/invoice-1700000000001-2026-04.pdf',  '00000000-0000-4000-8000-000000000002'),
   (null,                                    'other',    'general/other-1700000000002-onboarding-checklist.pdf',                    '00000000-0000-4000-8000-000000000001');

@@ -3,13 +3,14 @@ import { queryKeys } from "./query-keys";
 
 describe("queryKeys", () => {
   it("namespaces list and detail keys per entity", () => {
-    expect(queryKeys.contacts.all).toEqual(["contacts"]);
-    expect(queryKeys.contacts.lists()).toEqual(["contacts", "list"]);
-    expect(queryKeys.contacts.detail("abc")).toEqual(["contacts", "detail", "abc"]);
+    expect(queryKeys.clients.all).toEqual(["clients"]);
+    expect(queryKeys.clients.lists()).toEqual(["clients", "list"]);
+    expect(queryKeys.clients.detail("abc")).toEqual(["clients", "detail", "abc"]);
+    expect(queryKeys.clients.byAgent("a-1")).toEqual(["clients", "byAgent", "a-1"]);
   });
 
-  it("scopes documents by contact", () => {
-    expect(queryKeys.documents.byContact("c-1")).toEqual(["documents", "byContact", "c-1"]);
+  it("scopes documents by client", () => {
+    expect(queryKeys.documents.byClient("c-1")).toEqual(["documents", "byClient", "c-1"]);
   });
 
   it("exposes profile keys including the current-profile singleton", () => {

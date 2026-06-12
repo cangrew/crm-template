@@ -4,9 +4,9 @@ import React from "react";
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 const mockRefetch = vi.fn();
-let contactsData: unknown[] | undefined = undefined;
-let contactsIsLoading = false;
-let contactsIsError = false;
+let clientsData: unknown[] | undefined = undefined;
+let clientsIsLoading = false;
+let clientsIsError = false;
 let profileData:
   | {
       full_name: string | null;
@@ -16,10 +16,10 @@ let profileData:
   | undefined = undefined;
 
 vi.mock("@/lib/data/hooks", () => ({
-  useContacts: () => ({
-    data: contactsData,
-    isLoading: contactsIsLoading,
-    isError: contactsIsError,
+  useClients: () => ({
+    data: clientsData,
+    isLoading: clientsIsLoading,
+    isError: clientsIsError,
     refetch: mockRefetch,
   }),
   useCurrentProfile: () => ({ data: profileData }),
@@ -96,35 +96,40 @@ vi.mock("@/components/common/entity-table", () => ({
       {rows.length === 0 && emptyText ? (
         <p>{emptyText}</p>
       ) : (
-        (rows as Array<{ id: string; name: string }>).map((r) => <div key={r.id}>{r.name}</div>)
+        (rows as Array<{ id: string; first_name: string; last_name: string }>).map((r) => (
+          <div key={r.id}>{`${r.first_name} ${r.last_name}`}</div>
+        ))
       )}
     </div>
   ),
 }));
 
 vi.mock("@/components/ui/badges", () => ({
-  ContactBadge: ({ status }: { status: string }) => <span>{status}</span>,
+  ClientBadge: ({ status }: { status: string }) => <span>{status}</span>,
 }));
 
 import DashboardPage from "./page";
 
-function makeContact(
+function makeClient(
   overrides: Partial<{
     id: string;
-    name: string;
-    company: string | null;
-    status: "lead" | "active" | "at_risk" | "closed";
+    first_name: string;
+    last_name: string;
+    status: "prospect" | "active" | "inactive";
     created_at: string;
   }> = {},
 ) {
   return {
     id: "c1",
-    name: "Alice",
-    company: "Acme",
+    first_name: "Alice",
+    last_name: "Smith",
     status: "active" as const,
     created_at: "2026-01-01T00:00:00Z",
+    dob: null,
     email: null,
     phone: null,
+    address: null,
+    agent_id: null,
     notes: null,
     updated_at: "2026-01-01T00:00:00Z",
     ...overrides,
@@ -133,29 +138,29 @@ function makeContact(
 
 beforeEach(() => {
   vi.clearAllMocks();
-  contactsData = undefined;
-  contactsIsLoading = false;
-  contactsIsError = false;
+  clientsData = undefined;
+  clientsIsLoading = false;
+  clientsIsError = false;
   profileData = undefined;
 });
 
 describe("DashboardPage", () => {
-  it("shows error state when contacts fail to load", () => {
-    contactsIsError = true;
+  it("shows error state when clients fail to load", () => {
+    clientsIsError = true;
     render(<DashboardPage />);
     expect(screen.getByText("Failed to load the dashboard.")).toBeInTheDocument();
   });
 
   it("calls refetch when Retry is clicked in error state", () => {
-    contactsIsError = true;
+    clientsIsError = true;
     render(<DashboardPage />);
     screen.getByRole("button", { name: "Retry" }).click();
     expect(mockRefetch).toHaveBeenCalledTimes(1);
   });
 
-  it("shows '—' in stat cards while contacts are loading", () => {
-    contactsIsLoading = true;
-    contactsData = undefined;
+  it("shows '—' in stat cards while clients are loading", () => {
+    clientsIsLoading = true;
+    clientsData = undefined;
     render(<DashboardPage />);
     const statValues = screen.getAllByTestId("stat-value");
     // All four stat values should be '—' while loading
@@ -163,100 +168,109 @@ describe("DashboardPage", () => {
   });
 
   it("renders the stat grid", () => {
-    contactsData = [];
+    clientsData = [];
     render(<DashboardPage />);
     expect(screen.getByTestId("stat-grid")).toBeInTheDocument();
   });
 
-  it("shows total contacts count", () => {
-    contactsData = [makeContact({ id: "1" }), makeContact({ id: "2" }), makeContact({ id: "3" })];
+  it("shows total clients count", () => {
+    clientsData = [makeClient({ id: "1" }), makeClient({ id: "2" }), makeClient({ id: "3" })];
     render(<DashboardPage />);
-    const totalStat = screen.getByTestId("stat-total-contacts");
+    const totalStat = screen.getByTestId("stat-total-clients");
     expect(totalStat).toHaveTextContent("3");
   });
 
-  it("counts active contacts correctly", () => {
-    contactsData = [
-      makeContact({ id: "1", status: "active" }),
-      makeContact({ id: "2", status: "lead" }),
-      makeContact({ id: "3", status: "active" }),
+  it("counts active clients correctly", () => {
+    clientsData = [
+      makeClient({ id: "1", status: "active" }),
+      makeClient({ id: "2", status: "prospect" }),
+      makeClient({ id: "3", status: "active" }),
     ];
     render(<DashboardPage />);
     const activeStat = screen.getByTestId("stat-active");
     expect(activeStat).toHaveTextContent("2");
   });
 
-  it("counts lead contacts correctly", () => {
-    contactsData = [
-      makeContact({ id: "1", status: "lead" }),
-      makeContact({ id: "2", status: "active" }),
+  it("counts prospect clients correctly", () => {
+    clientsData = [
+      makeClient({ id: "1", status: "prospect" }),
+      makeClient({ id: "2", status: "active" }),
     ];
     render(<DashboardPage />);
-    const leadsStat = screen.getByTestId("stat-leads");
-    expect(leadsStat).toHaveTextContent("1");
+    const prospectsStat = screen.getByTestId("stat-prospects");
+    expect(prospectsStat).toHaveTextContent("1");
   });
 
-  it("counts at_risk contacts correctly", () => {
-    contactsData = [
-      makeContact({ id: "1", status: "at_risk" }),
-      makeContact({ id: "2", status: "at_risk" }),
-      makeContact({ id: "3", status: "active" }),
+  it("counts inactive clients correctly", () => {
+    clientsData = [
+      makeClient({ id: "1", status: "inactive" }),
+      makeClient({ id: "2", status: "inactive" }),
+      makeClient({ id: "3", status: "active" }),
     ];
     render(<DashboardPage />);
-    const atRiskStat = screen.getByTestId("stat-at-risk");
-    expect(atRiskStat).toHaveTextContent("2");
+    const inactiveStat = screen.getByTestId("stat-inactive");
+    expect(inactiveStat).toHaveTextContent("2");
   });
 
-  it("renders the recent contacts entity table", () => {
-    contactsData = [];
+  it("renders the recent clients entity table", () => {
+    clientsData = [];
     render(<DashboardPage />);
     expect(screen.getByTestId("entity-table")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Recent contacts" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Recent clients" })).toBeInTheDocument();
   });
 
-  it("shows empty text when there are no contacts", () => {
-    contactsData = [];
+  it("shows empty text when there are no clients", () => {
+    clientsData = [];
     render(<DashboardPage />);
-    expect(
-      screen.getByText("No contacts yet — add one from the Contacts page."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("No clients yet — add one from the Clients page.")).toBeInTheDocument();
   });
 
-  it("limits recent contacts to 5", () => {
-    contactsData = Array.from({ length: 8 }, (_, i) =>
-      makeContact({
+  it("limits recent clients to 5", () => {
+    clientsData = Array.from({ length: 8 }, (_, i) =>
+      makeClient({
         id: `c${i}`,
-        name: `Contact ${i}`,
+        first_name: "Client",
+        last_name: `${i}`,
         created_at: `2026-01-0${i + 1}T00:00:00Z`,
       }),
     );
     render(<DashboardPage />);
-    // The entity table stub renders one div per row with the contact name
-    const contactRows = screen.getAllByText(/Contact \d/);
-    expect(contactRows).toHaveLength(5);
+    // The entity table stub renders one div per row with the client name
+    const clientRows = screen.getAllByText(/Client \d/);
+    expect(clientRows).toHaveLength(5);
   });
 
-  it("sorts recent contacts by created_at descending (newest first)", () => {
-    contactsData = [
-      makeContact({ id: "old", name: "Old Contact", created_at: "2026-01-01T00:00:00Z" }),
-      makeContact({ id: "new", name: "New Contact", created_at: "2026-06-01T00:00:00Z" }),
+  it("sorts recent clients by created_at descending (newest first)", () => {
+    clientsData = [
+      makeClient({
+        id: "old",
+        first_name: "Old",
+        last_name: "Client",
+        created_at: "2026-01-01T00:00:00Z",
+      }),
+      makeClient({
+        id: "new",
+        first_name: "New",
+        last_name: "Client",
+        created_at: "2026-06-01T00:00:00Z",
+      }),
     ];
     render(<DashboardPage />);
-    const contactNames = screen.getAllByText(/Contact/).map((el) => el.textContent);
-    expect(contactNames[0]).toBe("New Contact");
-    expect(contactNames[1]).toBe("Old Contact");
+    const clientNames = screen.getAllByText(/Client/).map((el) => el.textContent);
+    expect(clientNames[0]).toBe("New Client");
+    expect(clientNames[1]).toBe("Old Client");
   });
 
   it("greets the user by first name when full_name is available", () => {
     profileData = { full_name: "Jane Doe", email: "jane@example.com", role: "admin" };
-    contactsData = [];
+    clientsData = [];
     render(<DashboardPage />);
     expect(screen.getByRole("heading", { name: "Welcome back, Jane" })).toBeInTheDocument();
   });
 
   it("greets by email when full_name is absent", () => {
     profileData = { full_name: null, email: "jane@example.com", role: "admin" };
-    contactsData = [];
+    clientsData = [];
     render(<DashboardPage />);
     expect(
       screen.getByRole("heading", { name: "Welcome back, jane@example.com" }),
@@ -265,21 +279,21 @@ describe("DashboardPage", () => {
 
   it("falls back to 'there' when neither name nor email is available", () => {
     profileData = undefined;
-    contactsData = [];
+    clientsData = [];
     render(<DashboardPage />);
     expect(screen.getByRole("heading", { name: "Welcome back, there" })).toBeInTheDocument();
   });
 
   it("shows role label in subtitle when role is set", () => {
     profileData = { full_name: "Jane", email: "jane@example.com", role: "admin" };
-    contactsData = [];
+    clientsData = [];
     render(<DashboardPage />);
     expect(screen.getByText("Signed in as Admin")).toBeInTheDocument();
   });
 
   it("shows generic subtitle when role is null", () => {
     profileData = { full_name: "Jane", email: "jane@example.com", role: null };
-    contactsData = [];
+    clientsData = [];
     render(<DashboardPage />);
     expect(screen.getByText("Here's where things stand")).toBeInTheDocument();
   });

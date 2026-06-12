@@ -1,4 +1,4 @@
--- Notification fan-out and ownership assertions (migrations 0002 + 0003).
+-- Notification fan-out and ownership assertions (migrations 0002 + 0004).
 -- Run with: pnpm db:test  (wraps `supabase test db`, which uses pgTAP).
 -- Everything runs inside a single transaction that is rolled back at the end.
 --
@@ -6,7 +6,7 @@
 -- bootstrap seed admin also receives fan-outs.
 
 begin;
-select plan(12);
+select plan(9);
 
 create extension if not exists pgtap;
 
@@ -37,126 +37,92 @@ update public.profiles set role = 'manager' where id = 'aaaaaaaa-aaaa-4aaa-8aaa-
 update public.profiles set role = 'agent' where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3';
 
 -- ---------------------------------------------------------------------------
--- Creating a contact (as superuser, actor null) notifies every role.
+-- Creating a client (as superuser, actor null) notifies staff only: agents
+-- must not see another book's client names through role fan-out.
 -- ---------------------------------------------------------------------------
 reset role;
 set local request.jwt.claims to '';
 
-insert into public.contacts (id, name, company, status)
-values ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1', 'Ntf Contact', 'Ntf Co', 'lead');
+insert into public.clients (id, first_name, last_name, status)
+values ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1', 'Ntf', 'Client', 'prospect');
 
 select is(
   (select count(*) from public.notifications
-   where type = 'contact_created'
+   where type = 'client_created'
      and entity_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1'
      and user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'),
   1::bigint,
-  'contact_created reaches the admin'
+  'client_created reaches the admin'
 );
 
 select is(
   (select count(*) from public.notifications
-   where type = 'contact_created'
+   where type = 'client_created'
      and entity_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1'
      and user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2'),
   1::bigint,
-  'contact_created reaches the manager'
+  'client_created reaches the manager'
 );
 
 select is(
   (select count(*) from public.notifications
-   where type = 'contact_created'
+   where type = 'client_created'
      and entity_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1'
      and user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3'),
-  1::bigint,
-  'contact_created reaches the agent'
+  0::bigint,
+  'agents are outside the client_created audience'
 );
 
 -- ---------------------------------------------------------------------------
--- The manager flags the contact at risk: high-priority fan-out to admin
--- (+managers), excluding the acting manager; agents are not in the audience.
+-- The manager creates a client: the admin is notified, the acting manager is
+-- excluded from their own change.
 -- ---------------------------------------------------------------------------
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2"}';
 
-update public.contacts set status = 'at_risk'
-where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1';
+insert into public.clients (id, first_name, last_name, status)
+values ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2', 'Second', 'Client', 'prospect');
 
 reset role;
 set local request.jwt.claims to '';
 
 select is(
   (select count(*) from public.notifications
-   where type = 'contact_at_risk'
-     and priority = 'high'
+   where type = 'client_created'
+     and entity_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2'
      and user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'),
   1::bigint,
-  'contact_at_risk reaches the admin as high priority'
+  'a manager-created client notifies the admin'
 );
 
 select is(
   (select count(*) from public.notifications
-   where type = 'contact_at_risk'
+   where type = 'client_created'
+     and entity_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2'
      and user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2'),
   0::bigint,
   'the acting manager is not notified about their own change'
-);
-
-select is(
-  (select count(*) from public.notifications
-   where type = 'contact_at_risk'
-     and user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3'),
-  0::bigint,
-  'agents are outside the contact_at_risk audience'
-);
-
--- ---------------------------------------------------------------------------
--- Closing the contact notifies admins only.
--- ---------------------------------------------------------------------------
-set local role authenticated;
-set local request.jwt.claims to '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2"}';
-
-update public.contacts set status = 'closed'
-where id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1';
-
-reset role;
-set local request.jwt.claims to '';
-
-select is(
-  (select count(*) from public.notifications
-   where type = 'contact_closed'
-     and user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'),
-  1::bigint,
-  'contact_closed reaches the admin'
-);
-
-select is(
-  (select count(*) from public.notifications
-   where type = 'contact_closed'
-     and user_id in ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3')),
-  0::bigint,
-  'contact_closed reaches neither manager nor agent'
 );
 
 -- ---------------------------------------------------------------------------
 -- Ownership RLS: users see and manage only their own notifications.
 -- ---------------------------------------------------------------------------
 set local role authenticated;
-set local request.jwt.claims to '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3"}';
+set local request.jwt.claims to '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2"}';
 
 select is(
   (select count(*) from public.notifications
    where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'),
   0::bigint,
-  'a agent cannot read another user''s notifications'
+  'a manager cannot read another user''s notifications'
 );
 
 select is(
   (select count(*) from public.notifications
-   where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3'
+   where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2'
      and entity_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1'),
   1::bigint,
-  'a agent reads their own notifications'
+  'a manager reads their own notifications'
 );
 
 select is(
@@ -171,7 +137,7 @@ select is(
 select is(
   pg_temp.affected(
     $$update public.notifications set read_at = now()
-      where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3'$$
+      where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2'$$
   ),
   1::bigint,
   'marking one''s own notification read succeeds'
