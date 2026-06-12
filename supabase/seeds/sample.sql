@@ -60,6 +60,25 @@ update public.profiles set role = 'agency_owner'
   where id = '00000000-0000-4000-8000-000000000006';
 
 -- ---------------------------------------------------------------------------
+-- Hierarchy: Quinn owns Harbor Insurance Group; Casey writes under it. A
+-- second agency and a direct (house) agent cover the remaining shapes.
+-- ---------------------------------------------------------------------------
+insert into public.agencies (id, name, status, commission_cut_bps, override_cut_bps, owner_profile_id, notes) values
+  ('20000000-0000-4000-8000-000000000001', 'Harbor Insurance Group', 'active', 5000, 3000,
+   '00000000-0000-4000-8000-000000000006', 'Quinn''s sub-agency; 50% commission cut, 30% override cut.'),
+  ('20000000-0000-4000-8000-000000000002', 'Beacon Benefits LLC', 'active', 4000, 2500, null, null);
+
+insert into public.agents (id, full_name, email, npn, status, agency_id, commission_split_bps, profile_id) values
+  ('30000000-0000-4000-8000-000000000001', 'Casey Agent',  'agent@example.com', '11110001', 'active',
+   '20000000-0000-4000-8000-000000000001', 8000, '00000000-0000-4000-8000-000000000003'),
+  ('30000000-0000-4000-8000-000000000002', 'Harper Writer', 'harper@harbor.example', '11110002', 'active',
+   '20000000-0000-4000-8000-000000000001', 7500, null),
+  ('30000000-0000-4000-8000-000000000003', 'Devon House',  'devon@findway.example', '11110003', 'active',
+   null, 8500, null),
+  ('30000000-0000-4000-8000-000000000004', 'Blake Former', 'blake@beacon.example', '11110004', 'terminated',
+   '20000000-0000-4000-8000-000000000002', 7000, null);
+
+-- ---------------------------------------------------------------------------
 -- Contacts (EXAMPLE ENTITY) — every status represented.
 -- ---------------------------------------------------------------------------
 insert into public.contacts (id, name, company, email, phone, status, notes, created_by) values

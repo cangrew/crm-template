@@ -1,4 +1,12 @@
-import { BookUser, FileText, LayoutDashboard, Users, type LucideIcon } from "lucide-react";
+import {
+  BookUser,
+  Building2,
+  FileText,
+  LayoutDashboard,
+  UserRound,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 /**
  * Single source of truth for primary navigation. The sidebar renders these
@@ -23,6 +31,13 @@ export const NAV_GROUPS: NavGroup[] = [
       // EXAMPLE ENTITY — safe to delete; see README "Removing the example entity".
       { href: "/contacts", label: "Contacts", icon: BookUser },
       { href: "/documents", label: "Documents", icon: FileText },
+    ],
+  },
+  {
+    group: "Agency",
+    items: [
+      { href: "/agents", label: "Agents", icon: UserRound },
+      { href: "/agencies", label: "Agencies", icon: Building2 },
     ],
   },
   {
