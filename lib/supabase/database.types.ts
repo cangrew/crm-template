@@ -136,6 +136,7 @@ export type Database = {
           id: string;
           mapping: Json;
           name: string;
+          source_config: Json;
           updated_at: string;
         };
         Insert: {
@@ -145,6 +146,7 @@ export type Database = {
           id?: string;
           mapping: Json;
           name: string;
+          source_config?: Json;
           updated_at?: string;
         };
         Update: {
@@ -154,6 +156,7 @@ export type Database = {
           id?: string;
           mapping?: Json;
           name?: string;
+          source_config?: Json;
           updated_at?: string;
         };
         Relationships: [

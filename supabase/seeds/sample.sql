@@ -86,6 +86,63 @@ insert into public.agents (id, full_name, email, npn, status, agency_id, commiss
   ('30000000-0000-4000-8000-000000000004', 'Blake Former', 'blake@beacon.example', '11110004', 'terminated',
    '20000000-0000-4000-8000-000000000002', 7000, null);
 
+-- Legacy agency/agent resources imported from old_data/resources.json. The
+-- client_corrections map is intentionally not imported in this sample pass.
+with legacy_agencies (id, name, override_cut_bps) as (
+  values
+    ('21000000-0000-4000-8000-000000000001'::uuid, 'AAB Insurance', 100),
+    ('21000000-0000-4000-8000-000000000002'::uuid, 'Financial Solutions', 125),
+    ('21000000-0000-4000-8000-000000000003'::uuid, 'Findway Solutions', 300),
+    ('21000000-0000-4000-8000-000000000004'::uuid, 'Infinity Group', 300),
+    ('21000000-0000-4000-8000-000000000005'::uuid, 'L&Y Insurance', 100),
+    ('21000000-0000-4000-8000-000000000006'::uuid, 'TBD', 300)
+)
+insert into public.agencies (id, name, status, commission_cut_bps, override_cut_bps, owner_profile_id, notes)
+select
+  id,
+  name,
+  'active',
+  0,
+  override_cut_bps,
+  null,
+  'Imported from old_data/resources.json; legacy rate stored as override cut.'
+from legacy_agencies;
+
+with legacy_agent_company as (
+  select *
+  from jsonb_each_text(
+    '{"Adriana Rosales":"Infinity Group","Adriana Torrealba":"Financial Solutions","Alexis Garcia":"Findway Solutions","Ana Caracas":"AAB Insurance","Anabel Rincon":"L&Y Insurance","Anahys Oliver":"L&Y Insurance","Andrea Prado De Serrano":"Findway Solutions","Andrea Zerpa":"Findway Solutions","Andry Chirinos Delgado":"Findway Solutions","Andry y Anyibi":"Findway Solutions","Andry,Anyibi y Myralvis":"Findway Solutions","Anizabeth Parra":"Infinity Group","Anyibi Chirinos Pararia":"Findway Solutions","Ariana Pena Guerra":"Findway Solutions","Ayme Mena Gonzalez":"Findway Solutions","Barbara Guerra":"Financial Solutions","Bassima Romhain":"Infinity Group","Blanca Molero Villalobos":"Financial Solutions","Boris Gonzalez Perez":"Findway Solutions","Candida castro":"Findway Solutions","Carolina Silva":"Findway Solutions","Cesar Vargas Viracacha":"Financial Solutions","Claudia Mejia":"Financial Solutions","Daniela Hidalgo":"Infinity Group","Darimar Fragiel":"Findway Solutions","Diego Perez Constantine":"Financial Solutions","Dora Chavez":"Findway Solutions","Elisa Alvarez":"Financial Solutions","Fabiana Rojas":"Financial Solutions","Francisco Astudillo-Soto":"Financial Solutions","Francys Loreto":"AAB Insurance","Gabriela Garcia":"L&Y Insurance","Gena Rosario":"Infinity Group","Gerardo Rodriguez":"Infinity Group","Gladys Ponce":"Findway Solutions","Haydee Izquierdo":"Findway Solutions","Indira Leon":"AAB Insurance","Infinity Group":"Infinity Group","Ivonne Leon":"Findway Solutions","Jackson Vasquez Ramirez":"Financial Solutions","Jennifer Medina":"Findway Solutions","Jhanaika Marin":"Infinity Group","Jhoana Tatesauth-Salgado":"Findway Solutions","Jonathan Escobar":"Financial Solutions","Jorge Martin-Lobo":"Financial Solutions","Jose Fazio Ruiz":"Financial Solutions","Josmeira Soto mendoza":"Findway Solutions","Juan Trujillo Talero":"Financial Solutions","Kamal Vina Rincones":"AAB Insurance","Karla Rojas":"Findway Solutions","Kassandra Bernal":"Findway Solutions","Katiuska Tolazzi":"Infinity Group","Kellsmir Fernandez":"Findway Solutions","Leslye Silva Urdaneta":"L&Y Insurance","Lida":"Infinity Group","Livia Lugo":"Findway Solutions","Luis Suarez":"Infinity Group","Luisa Campos":"L&Y Insurance","Manuel Ching Garcia":"Findway Solutions","Maria Colucci":"Financial Solutions","Maria Ronson":"Infinity Group","Mariangela Aviles":"AAB Insurance","Maried Hernandez":"Infinity Group","Marilin Gongora":"Findway Solutions","Marilyn Palomino":"Findway Solutions","Marismely Wilhem":"Infinity Group","Marivin Barboza":"Infinity Group","Marjorie Anaya":"Findway Solutions","Marlim Guerrero":"Findway Solutions","Mary Arango":"Findway Solutions","Maxima Estrella":"AAB Insurance","Michlin Romhain":"Infinity Group","Monica Gomez":"Findway Solutions","Morela Dosrrey":"Findway Solutions","Myralvis Ramirez":"Findway Solutions","Myrian Rios":"Findway Solutions","Nahily Blanque":"Infinity Group","Nancy Lobo-Manrique":"Financial Solutions","Natalia Paredes":"Findway Solutions","Robinson Rodriguez":"Findway Solutions","Rosa Contreras":"AAB Insurance","Roselyn Linares Leon":"TBD","Rosibel Villasana":"Findway Solutions","Runnairy Soto":"Infinity Group","Sandra Ruiz":"Findway Solutions","Sara Mileno":"Findway Solutions","Sonia Espitia":"Findway Solutions","Soto Mendoza,":"Findway Solutions","Stefany Leal Fleitas":"Financial Solutions","Susana Al Choufi":"Infinity Group","Wismerck Martinez":"Financial Solutions","Xioly Calderon":"Financial Solutions","Yadimay balaila":"Findway Solutions","Yadimay Balaila":"Findway Solutions","Yadimay Hernandez-Hernandez":"Findway Solutions","Yamaury Quintero Gomez":"Financial Solutions","Yasmir Olmos":"Findway Solutions","Yenny Quintero Rocha":"Findway Solutions","Yilibeth Diaz":"Financial Solutions","Yilibeth Diaz Rodriguez":"Financial Solutions","Yonny Guerra":"Findway Solutions","Yoycy Barreto":"AAB Insurance","Zoramy M Castillo Perez":"Findway Solutions"}'::jsonb
+  ) as t(full_name, agency_name)
+),
+legacy_agents as (
+  select
+    full_name,
+    agency_name,
+    row_number() over (order by full_name) as n
+  from legacy_agent_company
+),
+legacy_agencies (id, name) as (
+  values
+    ('21000000-0000-4000-8000-000000000001'::uuid, 'AAB Insurance'),
+    ('21000000-0000-4000-8000-000000000002'::uuid, 'Financial Solutions'),
+    ('21000000-0000-4000-8000-000000000003'::uuid, 'Findway Solutions'),
+    ('21000000-0000-4000-8000-000000000004'::uuid, 'Infinity Group'),
+    ('21000000-0000-4000-8000-000000000005'::uuid, 'L&Y Insurance'),
+    ('21000000-0000-4000-8000-000000000006'::uuid, 'TBD')
+)
+insert into public.agents (id, full_name, email, npn, status, agency_id, commission_split_bps, profile_id)
+select
+  ('31000000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid,
+  full_name,
+  null,
+  null,
+  'active',
+  legacy_agencies.id,
+  8000,
+  null
+from legacy_agents
+join legacy_agencies on legacy_agencies.name = legacy_agents.agency_name;
+
 -- ---------------------------------------------------------------------------
 -- Clients — every status represented, spread across the seeded agents
 -- (Casey, Harper, Devon) with a couple unassigned (house) rows. Each insert
@@ -102,12 +159,17 @@ insert into public.clients (id, first_name, last_name, dob, email, phone, addres
   ('10000000-0000-4000-8000-000000000008', 'Frank',  'Delgado',   '1953-08-26', 'frank.delgado@example.com',   '+1 555 0108', '12 Harbor View Blvd, St. Petersburg, FL', 'inactive', null, 'Lapsed last year; re-engage during AEP.', '00000000-0000-4000-8000-000000000001');
 
 -- ---------------------------------------------------------------------------
--- Carriers — two active, one inactive.
+-- Carriers — imported from old_data/carriers.json while preserving the IDs
+-- referenced by the sample policies below.
 -- ---------------------------------------------------------------------------
 insert into public.carriers (id, name, status, notes) values
-  ('40000000-0000-4000-8000-000000000001', 'Ambetter Health',   'active',   'Flat PMPM payer; statements arrive around the 15th.'),
-  ('40000000-0000-4000-8000-000000000002', 'Oscar Health',      'active',   'Pays a percentage of premium; NB and renewal rates differ.'),
-  ('40000000-0000-4000-8000-000000000003', 'Molina Healthcare', 'inactive', 'No longer writing new business with us.');
+  ('40000000-0000-4000-8000-000000000001', 'Ambetter', 'active', 'Imported from old_data/carriers.json; full legacy statement-import settings are preserved on the CSV mapping.'),
+  ('40000000-0000-4000-8000-000000000002', 'Oscar', 'active', 'Imported from old_data/carriers.json; full legacy statement-import settings are preserved on the CSV mapping.'),
+  ('40000000-0000-4000-8000-000000000003', 'Molina Healthcare', 'active', 'Imported from old_data/carriers.json; full legacy statement-import settings are preserved on the CSV mapping.'),
+  ('40000000-0000-4000-8000-000000000004', 'Aetna HFI', 'active', 'Imported from old_data/carriers.json; full legacy statement-import settings are preserved on the CSV mapping.'),
+  ('40000000-0000-4000-8000-000000000005', 'Cigna', 'active', 'Imported from old_data/carriers.json; full legacy statement-import settings are preserved on the CSV mapping.'),
+  ('40000000-0000-4000-8000-000000000006', 'United Healthcare', 'active', 'Imported from old_data/carriers.json; full legacy statement-import settings are preserved on the CSV mapping.'),
+  ('40000000-0000-4000-8000-000000000007', 'AmeriHealth', 'active', 'Imported from old_data/carriers.json; full legacy statement-import settings are preserved on the CSV mapping.');
 
 -- ---------------------------------------------------------------------------
 -- Rate schedules — Ambetter pays flat PMPM (with a superseded 2025 window),
@@ -122,13 +184,17 @@ insert into public.rate_schedules (id, carrier_id, rate_type, business_type, pmp
   ('41000000-0000-4000-8000-000000000005', '40000000-0000-4000-8000-000000000001', 'pmpm',               'new_business', 2000, null, '2025-01-01', '2025-12-31', null);
 
 -- ---------------------------------------------------------------------------
--- Carrier CSV mappings — how Ambetter's monthly statement columns map onto
--- the importer's statement fields; the header signature auto-matches uploads.
+-- Carrier CSV mappings — simple parser-ready mappings plus the complete
+-- legacy source configuration from old_data/carriers.json.
 -- ---------------------------------------------------------------------------
-insert into public.carrier_csv_mappings (id, carrier_id, name, mapping, header_signature) values
-  ('42000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', 'Ambetter monthly statement',
-   '{"policy_number":"Policy ID","carrier_member_id":"Member ID","subscriber_name":"Subscriber","subscriber_dob":"DOB","member_count":"Members","premium":"Premium","amount":"Commission Paid","period":"Coverage Month"}',
-   'policy id|member id|subscriber|dob|members|premium|commission paid|coverage month');
+insert into public.carrier_csv_mappings (id, carrier_id, name, mapping, header_signature, source_config) values
+  ('42000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', 'Ambetter legacy statement', '{"amount":"Total","member_count":"Number of Members"}'::jsonb, null, '{"name":"Ambetter","displayName":"Ambetter","headerRow":5,"sheetIndex":0,"filterColumn":"GA NAME","filterValue":"Grand Total","columnMap":{"gaName":"GA NAME","statement":"Policy Effective Date","customerName":["Insured First Name","Insured Last Name"],"subscriber":"Number of Members","agentName":"Agent Name","amount":"Total"},"divisor":3}'::jsonb),
+  ('42000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002', 'Oscar legacy statement', '{"carrier_member_id":"Member ID","subscriber_name":"Subscriber name","amount":"Total"}'::jsonb, null, '{"name":"Oscar","displayName":"Oscar","headerRow":5,"sheetIndex":0,"filterColumn":"GA NAME","filterValue":"Grand Total","columnMap":{"gaName":"GA NAME","statement":"Commission month","customerId":"Member ID","customerName":"Subscriber name","agentName":"Producer name","amount":"Total"},"divisor":3}'::jsonb),
+  ('42000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000003', 'Molina Healthcare legacy statement', '{"carrier_member_id":"Subscriber ID","member_count":"Member Count"}'::jsonb, null, '{"name":"Molina","displayName":"Molina Healthcare","headerRow":5,"sheetIndex":0,"filterColumn":"GA Name","filterValue":"Grand Total","columnMap":{"gaName":"GA Name","customerId":"Subscriber ID","customerName":["Subcriber First Name","Subcriber Last Name"],"memberCount":"Member Count"},"divisor":3}'::jsonb),
+  ('42000000-0000-4000-8000-000000000004', '40000000-0000-4000-8000-000000000004', 'Aetna HFI legacy statement', '{"carrier_member_id":"Customer Number","subscriber_name":"Customer Name"}'::jsonb, null, '{"name":"Aetna_HFI","displayName":"Aetna HFI","headerRow":4,"sheetIndex":0,"agentColumnStart":"Andrea Zerpa-Romero","agentColumnEnd":"Wismerck Martinez","filterColumn":"GA Name","filterValue":"Grand Total","columnMap":{"gaName":"GA Name","statement":"Statement","customerId":"Customer Number","customerName":"Customer Name","date":"DATE","subscriber":"SUBSCRIBER"},"divisor":3}'::jsonb),
+  ('42000000-0000-4000-8000-000000000005', '40000000-0000-4000-8000-000000000005', 'Cigna legacy statement', '{"carrier_member_id":"Subscriber ID","subscriber_name":"Customer Name","member_count":"Member Count"}'::jsonb, null, '{"name":"Cigna","displayName":"Cigna","headerRow":4,"sheetIndex":0,"filterColumn":"Statement Date","filterValue":"Grand Total","columnMap":{"gaName":"GA NAME","statement":"Statement Date","customerId":"Subscriber ID","customerName":"Customer Name","date":"Policy Period","subscriber":"Member Count"},"divisor":4}'::jsonb),
+  ('42000000-0000-4000-8000-000000000006', '40000000-0000-4000-8000-000000000006', 'United Healthcare legacy statement', '{"subscriber_name":"Member Name","policy_number":"Policy Number"}'::jsonb, null, '{"name":"UHC","displayName":"United Healthcare","headerRow":5,"sheetIndex":0,"filterColumn":"GA Name","filterValue":"Grand Total","columnMap":{"gaName":"GA Name","statement":"Payment Period","customerId":"Policy Number","customerName":"Member Name"},"divisor":4}'::jsonb),
+  ('42000000-0000-4000-8000-000000000007', '40000000-0000-4000-8000-000000000007', 'AmeriHealth legacy statement', '{}'::jsonb, null, '{"name":"Amerihealth","displayName":"AmeriHealth","headerRow":5,"sheetIndex":0,"filterColumn":"GA Name","filterValue":"Grand Total","columnMap":{"gaName":"GA Name","statement":"Premium Period","customerName":["Member First Name","Member Last Name"]},"divisor":4}'::jsonb);
 
 -- ---------------------------------------------------------------------------
 -- Policies — every status represented, spread across the seeded clients,

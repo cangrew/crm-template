@@ -6,7 +6,7 @@
 -- Everything runs inside a single transaction that is rolled back at the end.
 
 begin;
-select plan(10);
+select plan(11);
 
 create extension if not exists pgtap;
 
@@ -53,6 +53,13 @@ insert into public.carrier_csv_mappings (id, carrier_id, name, mapping, header_s
 values ('ae444444-4444-4444-8444-444444444441', 'ac222222-2222-4222-8222-222222222221',
         'Ambetter monthly statement', '{"policy_number":"Policy ID"}',
         'policy id|member id');
+
+select is(
+  (select source_config from public.carrier_csv_mappings
+   where id = 'ae444444-4444-4444-8444-444444444441'),
+  '{}'::jsonb,
+  'carrier CSV mappings default legacy source_config to an empty object'
+);
 
 -- ===========================================================================
 -- Manager: create/read/update carriers and their economics

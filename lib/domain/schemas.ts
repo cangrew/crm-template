@@ -16,6 +16,16 @@ export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
 const uuid = z.uuid();
 const nonEmpty = z.string().trim().min(1);
+const jsonValue: z.ZodType<unknown> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(jsonValue),
+    z.record(z.string(), jsonValue),
+  ]),
+);
 
 /* profiles */
 export const profileSchema = z.object({
@@ -203,6 +213,7 @@ export const csvMappingInsertSchema = z.object({
   name: nonEmpty,
   mapping: z.record(z.string(), z.string()),
   header_signature: z.string().trim().nullable().optional(),
+  source_config: jsonValue.optional(),
 });
 
 export const csvMappingUpdateSchema = z
@@ -210,6 +221,7 @@ export const csvMappingUpdateSchema = z
     name: nonEmpty,
     mapping: z.record(z.string(), z.string()),
     header_signature: z.string().trim().nullable(),
+    source_config: jsonValue,
   })
   .partial();
 

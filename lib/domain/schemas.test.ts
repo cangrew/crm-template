@@ -313,8 +313,10 @@ describe("csvMappingInsertSchema", () => {
       name: "Ambetter monthly statement",
       mapping: { policy_number: "Policy ID", amount: "Commission Paid" },
       header_signature: "policy id|commission paid",
+      source_config: { headerRow: 5, columnMap: { amount: "Total" } },
     });
     expect(result.mapping.policy_number).toBe("Policy ID");
+    expect(result.source_config).toEqual({ headerRow: 5, columnMap: { amount: "Total" } });
   });
 
   it("rejects a blank name and a non-string mapping value", () => {
@@ -336,6 +338,9 @@ describe("csvMappingInsertSchema", () => {
 
   it("accepts a partial update patch", () => {
     expect(csvMappingUpdateSchema.parse({ header_signature: null }).header_signature).toBeNull();
+    expect(csvMappingUpdateSchema.parse({ source_config: { divisor: 3 } }).source_config).toEqual({
+      divisor: 3,
+    });
   });
 });
 

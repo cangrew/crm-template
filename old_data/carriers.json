@@ -1,0 +1,118 @@
+{
+  "carriers": {
+    "Aetna_HFI": {
+      "name": "Aetna_HFI",
+      "displayName": "Aetna HFI",
+      "headerRow": 4,
+      "sheetIndex": 0,
+      "agentColumnStart": "Andrea Zerpa-Romero",
+      "agentColumnEnd": "Wismerck Martinez",
+      "filterColumn": "GA Name",
+      "filterValue": "Grand Total",
+      "columnMap": {
+        "gaName": "GA Name",
+        "statement": "Statement",
+        "customerId": "Customer Number",
+        "customerName": "Customer Name",
+        "date": "DATE",
+        "subscriber": "SUBSCRIBER"
+      },
+      "divisor": 3.0
+    },
+    "Ambetter": {
+      "name": "Ambetter",
+      "displayName": "Ambetter",
+      "headerRow": 5,
+      "sheetIndex": 0,
+      "filterColumn": "GA NAME",
+      "filterValue": "Grand Total",
+      "columnMap": {
+        "gaName": "GA NAME",
+        "statement": "Policy Effective Date",
+        "customerName": ["Insured First Name", "Insured Last Name"],
+        "subscriber": "Number of Members",
+        "agentName": "Agent Name",
+        "amount": "Total"
+      },
+      "divisor": 3.0
+    },
+    "Cigna": {
+      "name": "Cigna",
+      "displayName": "Cigna",
+      "headerRow": 4,
+      "sheetIndex": 0,
+      "filterColumn": "Statement Date",
+      "filterValue": "Grand Total",
+      "columnMap": {
+        "gaName": "GA NAME",
+        "statement": "Statement Date",
+        "customerId": "Subscriber ID",
+        "customerName": "Customer Name",
+        "date": "Policy Period",
+        "subscriber": "Member Count"
+      },
+      "divisor": 4.0
+    },
+    "Oscar": {
+      "name": "Oscar",
+      "displayName": "Oscar",
+      "headerRow": 5,
+      "sheetIndex": 0,
+      "filterColumn": "GA NAME",
+      "filterValue": "Grand Total",
+      "columnMap": {
+        "gaName": "GA NAME",
+        "statement": "Commission month",
+        "customerId": "Member ID",
+        "customerName": "Subscriber name",
+        "agentName": "Producer name",
+        "amount": "Total"
+      },
+      "divisor": 3.0
+    },
+    "UHC": {
+      "name": "UHC",
+      "displayName": "United Healthcare",
+      "headerRow": 5,
+      "sheetIndex": 0,
+      "filterColumn": "GA Name",
+      "filterValue": "Grand Total",
+      "columnMap": {
+        "gaName": "GA Name",
+        "statement": "Payment Period",
+        "customerId": "Policy Number",
+        "customerName": "Member Name"
+      },
+      "divisor": 4.0
+    },
+    "Molina": {
+      "name": "Molina",
+      "displayName": "Molina Healthcare",
+      "headerRow": 5,
+      "sheetIndex": 0,
+      "filterColumn": "GA Name",
+      "filterValue": "Grand Total",
+      "columnMap": {
+        "gaName": "GA Name",
+        "customerId": "Subscriber ID",
+        "customerName": ["Subcriber First Name", "Subcriber Last Name"],
+        "memberCount": "Member Count"
+      },
+      "divisor": 3.0
+    },
+    "Amerihealth": {
+      "name": "Amerihealth",
+      "displayName": "AmeriHealth",
+      "headerRow": 5,
+      "sheetIndex": 0,
+      "filterColumn": "GA Name",
+      "filterValue": "Grand Total",
+      "columnMap": {
+        "gaName": "GA Name",
+        "statement": "Premium Period",
+        "customerName": ["Member First Name", "Member Last Name"]
+      },
+      "divisor": 4.0
+    }
+  }
+}
