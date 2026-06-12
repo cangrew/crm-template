@@ -15,11 +15,31 @@ export const queryKeys = {
     detail: (id: string) => ["agents", "detail", id] as const,
     byAgency: (agencyId: string) => ["agents", "byAgency", agencyId] as const,
   },
+  carriers: {
+    all: ["carriers"] as const,
+    lists: () => ["carriers", "list"] as const,
+    detail: (id: string) => ["carriers", "detail", id] as const,
+  },
   clients: {
     all: ["clients"] as const,
     lists: () => ["clients", "list"] as const,
     detail: (id: string) => ["clients", "detail", id] as const,
     byAgent: (agentId: string) => ["clients", "byAgent", agentId] as const,
+  },
+  csvMappings: {
+    all: ["csvMappings"] as const,
+    byCarrier: (carrierId: string) => ["csvMappings", "byCarrier", carrierId] as const,
+  },
+  policies: {
+    all: ["policies"] as const,
+    lists: () => ["policies", "list"] as const,
+    detail: (id: string) => ["policies", "detail", id] as const,
+    byClient: (clientId: string) => ["policies", "byClient", clientId] as const,
+    byAgent: (agentId: string) => ["policies", "byAgent", agentId] as const,
+  },
+  rateSchedules: {
+    all: ["rateSchedules"] as const,
+    byCarrier: (carrierId: string) => ["rateSchedules", "byCarrier", carrierId] as const,
   },
   documents: {
     all: ["documents"] as const,

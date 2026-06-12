@@ -1,26 +1,44 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AgencyStatus, AgentStatus, ClientStatus } from "@/lib/domain/enums";
+import type {
+  AgencyStatus,
+  AgentStatus,
+  CarrierStatus,
+  ClientStatus,
+  PolicyStatus,
+} from "@/lib/domain/enums";
 import type { NotificationType } from "@/lib/domain/notifications";
 import type {
   AgencyInput,
   AgencyUpdate,
   AgentInput,
   AgentUpdate,
+  CarrierInput,
+  CarrierUpdate,
   ClientInput,
   ClientUpdate,
+  CsvMappingInput,
+  CsvMappingUpdate,
   DocumentInput,
+  PolicyInput,
+  PolicyUpdate,
   ProfileUpdate,
+  RateScheduleInput,
+  RateScheduleUpdate,
 } from "@/lib/domain/schemas";
 import { createClient } from "@/lib/supabase/client";
 import * as agenciesApi from "./agencies";
 import * as agentsApi from "./agents";
+import * as carriersApi from "./carriers";
 import * as clientsApi from "./clients";
+import * as csvMappingsApi from "./csv-mappings";
 import * as documentsApi from "./documents";
 import * as notificationPreferencesApi from "./notification-preferences";
 import * as notificationsApi from "./notifications";
+import * as policiesApi from "./policies";
 import * as profilesApi from "./profiles";
+import * as rateSchedulesApi from "./rate-schedules";
 import { queryKeys } from "./query-keys";
 
 /* ------------------------------------------------------------- agencies --- */
@@ -213,6 +231,232 @@ export function useDeleteClient() {
   return useMutation({
     mutationFn: (id: string) => clientsApi.deleteClient(supabase, id),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.clients.all }),
+  });
+}
+
+/* -------------------------------------------------------------- carriers --- */
+export function useCarriers() {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.carriers.lists(),
+    queryFn: () => carriersApi.listCarriers(supabase),
+  });
+}
+
+export function useCarrier(id: string) {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.carriers.detail(id),
+    queryFn: () => carriersApi.getCarrier(supabase, id),
+    enabled: Boolean(id),
+  });
+}
+
+export function useCreateCarrier() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CarrierInput) => carriersApi.createCarrier(supabase, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.carriers.all }),
+  });
+}
+
+export function useUpdateCarrier() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: CarrierUpdate }) =>
+      carriersApi.updateCarrier(supabase, id, patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.carriers.all }),
+  });
+}
+
+export function useUpdateCarrierStatus() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: CarrierStatus }) =>
+      carriersApi.updateCarrierStatus(supabase, id, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.carriers.all }),
+  });
+}
+
+export function useDeleteCarrier() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => carriersApi.deleteCarrier(supabase, id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.carriers.all }),
+  });
+}
+
+/* -------------------------------------------------------- rate schedules --- */
+/* Rate-schedule and csv-mapping mutations also invalidate the carriers family:
+ * carrier detail pages compose both, so they refresh as one. */
+export function useRateSchedulesByCarrier(carrierId: string) {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.rateSchedules.byCarrier(carrierId),
+    queryFn: () => rateSchedulesApi.listRateSchedulesByCarrier(supabase, carrierId),
+    enabled: Boolean(carrierId),
+  });
+}
+
+export function useCreateRateSchedule() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: RateScheduleInput) => rateSchedulesApi.createRateSchedule(supabase, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.rateSchedules.all });
+      qc.invalidateQueries({ queryKey: queryKeys.carriers.all });
+    },
+  });
+}
+
+export function useUpdateRateSchedule() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: RateScheduleUpdate }) =>
+      rateSchedulesApi.updateRateSchedule(supabase, id, patch),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.rateSchedules.all });
+      qc.invalidateQueries({ queryKey: queryKeys.carriers.all });
+    },
+  });
+}
+
+export function useDeleteRateSchedule() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => rateSchedulesApi.deleteRateSchedule(supabase, id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.rateSchedules.all });
+      qc.invalidateQueries({ queryKey: queryKeys.carriers.all });
+    },
+  });
+}
+
+/* ----------------------------------------------------------- csv mappings -- */
+export function useCsvMappingsByCarrier(carrierId: string) {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.csvMappings.byCarrier(carrierId),
+    queryFn: () => csvMappingsApi.listCsvMappingsByCarrier(supabase, carrierId),
+    enabled: Boolean(carrierId),
+  });
+}
+
+export function useCreateCsvMapping() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CsvMappingInput) => csvMappingsApi.createCsvMapping(supabase, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.csvMappings.all });
+      qc.invalidateQueries({ queryKey: queryKeys.carriers.all });
+    },
+  });
+}
+
+export function useUpdateCsvMapping() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: CsvMappingUpdate }) =>
+      csvMappingsApi.updateCsvMapping(supabase, id, patch),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.csvMappings.all });
+      qc.invalidateQueries({ queryKey: queryKeys.carriers.all });
+    },
+  });
+}
+
+export function useDeleteCsvMapping() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => csvMappingsApi.deleteCsvMapping(supabase, id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.csvMappings.all });
+      qc.invalidateQueries({ queryKey: queryKeys.carriers.all });
+    },
+  });
+}
+
+/* -------------------------------------------------------------- policies --- */
+export function usePolicies() {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.policies.lists(),
+    queryFn: () => policiesApi.listPolicies(supabase),
+  });
+}
+
+export function usePolicy(id: string) {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.policies.detail(id),
+    queryFn: () => policiesApi.getPolicy(supabase, id),
+    enabled: Boolean(id),
+  });
+}
+
+export function usePoliciesByClient(clientId: string) {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.policies.byClient(clientId),
+    queryFn: () => policiesApi.listPoliciesByClient(supabase, clientId),
+    enabled: Boolean(clientId),
+  });
+}
+
+export function usePoliciesByAgent(agentId: string) {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.policies.byAgent(agentId),
+    queryFn: () => policiesApi.listPoliciesByAgent(supabase, agentId),
+    enabled: Boolean(agentId),
+  });
+}
+
+export function useCreatePolicy() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: PolicyInput) => policiesApi.createPolicy(supabase, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.policies.all }),
+  });
+}
+
+export function useUpdatePolicy() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: PolicyUpdate }) =>
+      policiesApi.updatePolicy(supabase, id, patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.policies.all }),
+  });
+}
+
+export function useUpdatePolicyStatus() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: PolicyStatus }) =>
+      policiesApi.updatePolicyStatus(supabase, id, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.policies.all }),
+  });
+}
+
+export function useDeletePolicy() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => policiesApi.deletePolicy(supabase, id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.policies.all }),
   });
 }
 

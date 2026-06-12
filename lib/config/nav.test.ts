@@ -5,8 +5,10 @@ describe("NAV_GROUPS", () => {
   it("contains the core workspace and admin destinations", () => {
     const hrefs = NAV_GROUPS.flatMap((g) => g.items.map((it) => it.href));
     expect(hrefs).toContain("/");
+    expect(hrefs).toContain("/policies");
     expect(hrefs).toContain("/clients");
     expect(hrefs).toContain("/documents");
+    expect(hrefs).toContain("/carriers");
     expect(hrefs).toContain("/settings/users");
   });
 });

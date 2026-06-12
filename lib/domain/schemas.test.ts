@@ -4,11 +4,19 @@ import {
   agencyUpdateSchema,
   agentInsertSchema,
   agentUpdateSchema,
+  carrierInsertSchema,
+  carrierUpdateSchema,
   clientInsertSchema,
   clientUpdateSchema,
+  csvMappingInsertSchema,
+  csvMappingUpdateSchema,
   documentInsertSchema,
+  policyInsertSchema,
+  policyUpdateSchema,
   profileInsertSchema,
   profileUpdateSchema,
+  rateScheduleInsertSchema,
+  rateScheduleUpdateSchema,
 } from "./schemas";
 
 const validClient = {
@@ -190,6 +198,209 @@ describe("agentUpdateSchema", () => {
 
   it("rejects an unknown status", () => {
     expect(agentUpdateSchema.safeParse({ status: "retired" }).success).toBe(false);
+  });
+});
+
+describe("carrierInsertSchema", () => {
+  it("accepts a minimal carrier and applies defaults", () => {
+    const result = carrierInsertSchema.parse({ name: "Ambetter Health" });
+    expect(result.status).toBe("active");
+    expect(result.name).toBe("Ambetter Health");
+  });
+
+  it("rejects a blank name and an unknown status", () => {
+    expect(carrierInsertSchema.safeParse({ name: "  " }).success).toBe(false);
+    expect(carrierInsertSchema.safeParse({ name: "X", status: "paused" }).success).toBe(false);
+  });
+});
+
+describe("carrierUpdateSchema", () => {
+  it("accepts a partial patch and a nullable notes clear", () => {
+    const result = carrierUpdateSchema.parse({ status: "inactive", notes: null });
+    expect(result.status).toBe("inactive");
+    expect(result.notes).toBeNull();
+    expect(result.name).toBeUndefined();
+  });
+});
+
+const validPmpmRate = {
+  carrier_id: "5c0e8c1e-95a1-4f44-9d0a-7d3a44d2b1aa",
+  rate_type: "pmpm",
+  business_type: "new_business",
+  pmpm_cents: 2200,
+  effective_from: "2026-01-01",
+};
+
+describe("rateScheduleInsertSchema", () => {
+  it("accepts an open-ended PMPM rate", () => {
+    const result = rateScheduleInsertSchema.parse(validPmpmRate);
+    expect(result.pmpm_cents).toBe(2200);
+    expect(result.effective_to).toBeUndefined();
+  });
+
+  it("accepts a percent-of-premium rate with a window and state", () => {
+    const result = rateScheduleInsertSchema.parse({
+      carrier_id: "5c0e8c1e-95a1-4f44-9d0a-7d3a44d2b1aa",
+      rate_type: "percent_of_premium",
+      business_type: "renewal",
+      percent_bps: 300,
+      effective_from: "2026-01-01",
+      effective_to: "2026-12-31",
+      state: "FL",
+    });
+    expect(result.percent_bps).toBe(300);
+    expect(result.state).toBe("FL");
+  });
+
+  it("rejects a rate carrying both value columns", () => {
+    expect(rateScheduleInsertSchema.safeParse({ ...validPmpmRate, percent_bps: 500 }).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects a rate carrying neither value column", () => {
+    expect(rateScheduleInsertSchema.safeParse({ ...validPmpmRate, pmpm_cents: null }).success).toBe(
+      false,
+    );
+    expect(
+      rateScheduleInsertSchema.safeParse({
+        ...validPmpmRate,
+        rate_type: "percent_of_premium",
+        pmpm_cents: null,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a negative PMPM value and out-of-range basis points", () => {
+    expect(rateScheduleInsertSchema.safeParse({ ...validPmpmRate, pmpm_cents: -1 }).success).toBe(
+      false,
+    );
+    expect(
+      rateScheduleInsertSchema.safeParse({
+        ...validPmpmRate,
+        rate_type: "percent_of_premium",
+        pmpm_cents: null,
+        percent_bps: 10001,
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("rateScheduleUpdateSchema", () => {
+  it("accepts a window-only patch without re-stating the value", () => {
+    const result = rateScheduleUpdateSchema.parse({ effective_to: "2026-12-31" });
+    expect(result.effective_to).toBe("2026-12-31");
+  });
+
+  it("re-applies the exactly-one rule when the patch changes rate_type", () => {
+    expect(
+      rateScheduleUpdateSchema.safeParse({ rate_type: "pmpm", pmpm_cents: null }).success,
+    ).toBe(false);
+    expect(
+      rateScheduleUpdateSchema.safeParse({
+        rate_type: "percent_of_premium",
+        percent_bps: 500,
+        pmpm_cents: null,
+      }).success,
+    ).toBe(true);
+  });
+});
+
+describe("csvMappingInsertSchema", () => {
+  it("accepts a mapping of statement fields to CSV headers", () => {
+    const result = csvMappingInsertSchema.parse({
+      carrier_id: "5c0e8c1e-95a1-4f44-9d0a-7d3a44d2b1aa",
+      name: "Ambetter monthly statement",
+      mapping: { policy_number: "Policy ID", amount: "Commission Paid" },
+      header_signature: "policy id|commission paid",
+    });
+    expect(result.mapping.policy_number).toBe("Policy ID");
+  });
+
+  it("rejects a blank name and a non-string mapping value", () => {
+    expect(
+      csvMappingInsertSchema.safeParse({
+        carrier_id: "5c0e8c1e-95a1-4f44-9d0a-7d3a44d2b1aa",
+        name: " ",
+        mapping: {},
+      }).success,
+    ).toBe(false);
+    expect(
+      csvMappingInsertSchema.safeParse({
+        carrier_id: "5c0e8c1e-95a1-4f44-9d0a-7d3a44d2b1aa",
+        name: "X",
+        mapping: { amount: 5 },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts a partial update patch", () => {
+    expect(csvMappingUpdateSchema.parse({ header_signature: null }).header_signature).toBeNull();
+  });
+});
+
+const validPolicy = {
+  client_id: "5c0e8c1e-95a1-4f44-9d0a-7d3a44d2b1aa",
+  carrier_id: "5c0e8c1e-95a1-4f44-9d0a-7d3a44d2b1ab",
+  agent_id: "5c0e8c1e-95a1-4f44-9d0a-7d3a44d2b1ac",
+};
+
+describe("policyInsertSchema", () => {
+  it("accepts a minimal policy and applies defaults", () => {
+    const result = policyInsertSchema.parse(validPolicy);
+    expect(result.status).toBe("draft");
+    expect(result.member_count).toBe(1);
+  });
+
+  it("accepts the optional detail fields", () => {
+    const result = policyInsertSchema.parse({
+      ...validPolicy,
+      policy_number: "AMB-1001",
+      plan_name: "Ambetter Balanced Care 11",
+      member_count: 3,
+      monthly_premium_cents: 78000,
+      effective_date: "2026-01-01",
+      original_effective_date: "2025-01-01",
+    });
+    expect(result.member_count).toBe(3);
+    expect(result.monthly_premium_cents).toBe(78000);
+    expect(result.original_effective_date).toBe("2025-01-01");
+  });
+
+  it("rejects a missing required id", () => {
+    expect(policyInsertSchema.safeParse({ client_id: validPolicy.client_id }).success).toBe(false);
+  });
+
+  it("rejects a member count below 1", () => {
+    expect(policyInsertSchema.safeParse({ ...validPolicy, member_count: 0 }).success).toBe(false);
+  });
+
+  it("rejects a negative premium", () => {
+    expect(
+      policyInsertSchema.safeParse({ ...validPolicy, monthly_premium_cents: -100 }).success,
+    ).toBe(false);
+  });
+
+  it("rejects an unknown status", () => {
+    expect(policyInsertSchema.safeParse({ ...validPolicy, status: "expired" }).success).toBe(false);
+  });
+});
+
+describe("policyUpdateSchema", () => {
+  it("accepts a partial patch with nullable clears", () => {
+    const result = policyUpdateSchema.parse({
+      status: "active",
+      effectuated_at: "2026-01-05",
+      termination_date: null,
+      notes: null,
+    });
+    expect(result.status).toBe("active");
+    expect(result.termination_date).toBeNull();
+    expect(result.client_id).toBeUndefined();
+  });
+
+  it("rejects a malformed date in a patch", () => {
+    expect(policyUpdateSchema.safeParse({ effective_date: "01/01/2026" }).success).toBe(false);
   });
 });
 

@@ -1,4 +1,10 @@
-import type { AgencyStatus, AgentStatus, ClientStatus } from "@/lib/domain/enums";
+import type {
+  AgencyStatus,
+  AgentStatus,
+  CarrierStatus,
+  ClientStatus,
+  PolicyStatus,
+} from "@/lib/domain/enums";
 
 /** Badge tone tokens (see components/ui/badge.tsx). */
 export type Tone =
@@ -30,4 +36,20 @@ export const agentTone: Record<AgentStatus, Tone> = {
   active: "t-green",
   inactive: "t-slate",
   terminated: "t-red",
+};
+
+export const carrierTone: Record<CarrierStatus, Tone> = {
+  active: "t-green",
+  inactive: "t-slate",
+};
+
+export const policyTone: Record<PolicyStatus, Tone> = {
+  draft: "t-slate",
+  submitted: "t-indigo",
+  active: "t-green",
+  grace: "t-amber",
+  lapsed: "t-red",
+  cancelled: "t-red",
+  terminated: "t-slate",
+  renewed: "t-teal",
 };

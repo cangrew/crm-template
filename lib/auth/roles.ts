@@ -1,6 +1,13 @@
 import type { AppRole } from "@/lib/domain/enums";
 
-export type Resource = "clients" | "documents" | "users" | "agents" | "agencies";
+export type Resource =
+  | "clients"
+  | "documents"
+  | "users"
+  | "agents"
+  | "agencies"
+  | "carriers"
+  | "policies";
 
 export type Action = "create" | "read" | "update" | "delete";
 
@@ -21,6 +28,8 @@ const PERMISSIONS: Record<AppRole, Record<Resource, readonly Action[]>> = {
     users: ALL,
     agents: ALL,
     agencies: ALL,
+    carriers: ALL,
+    policies: ALL,
   },
   manager: {
     clients: ["create", "read", "update"],
@@ -28,6 +37,8 @@ const PERMISSIONS: Record<AppRole, Record<Resource, readonly Action[]>> = {
     users: [],
     agents: ["create", "read", "update"],
     agencies: ["create", "read", "update"],
+    carriers: ["create", "read", "update"],
+    policies: ["create", "read", "update"],
   },
   agent: {
     clients: ["read"],
@@ -35,6 +46,10 @@ const PERMISSIONS: Record<AppRole, Record<Resource, readonly Action[]>> = {
     users: [],
     agents: ["read"],
     agencies: [],
+    // No carrier-management access; carrier names on policies resolve via the
+    // tenant-readable carriers list, not this matrix.
+    carriers: [],
+    policies: ["read"],
   },
   agency_owner: {
     clients: ["read"],
@@ -42,6 +57,8 @@ const PERMISSIONS: Record<AppRole, Record<Resource, readonly Action[]>> = {
     users: [],
     agents: ["read"],
     agencies: ["read"],
+    carriers: [],
+    policies: ["read"],
   },
 };
 

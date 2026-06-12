@@ -1,5 +1,15 @@
 import { z } from "zod";
-import { AGENCY_STATUSES, AGENT_STATUSES, APP_ROLES, CLIENT_STATUSES } from "./enums";
+import {
+  AGENCY_STATUSES,
+  AGENT_STATUSES,
+  APP_ROLES,
+  BUSINESS_TYPES,
+  CARRIER_STATUSES,
+  CLIENT_STATUSES,
+  POLICY_STATUSES,
+  RATE_TYPES,
+  type RateType,
+} from "./enums";
 
 export const DOCUMENT_KINDS = ["contract", "invoice", "other"] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
@@ -109,6 +119,138 @@ export const clientUpdateSchema = z
   })
   .partial();
 
+/* carriers */
+export const carrierInsertSchema = z.object({
+  name: nonEmpty,
+  status: z.enum(CARRIER_STATUSES).default("active"),
+  notes: z.string().trim().optional(),
+});
+
+export const carrierUpdateSchema = z
+  .object({
+    name: nonEmpty,
+    status: z.enum(CARRIER_STATUSES),
+    notes: z.string().trim().nullable(),
+  })
+  .partial();
+
+/* rate schedules — exactly the value column matching rate_type must be
+ * populated (mirrors the rate_schedules_value_matches_type SQL check). The
+ * helper skips patches that do not touch rate_type. */
+function enforceRateValueRule(
+  val: { rate_type?: RateType; pmpm_cents?: number | null; percent_bps?: number | null },
+  ctx: z.RefinementCtx,
+) {
+  if (val.rate_type === undefined) return;
+  if (val.rate_type === "pmpm") {
+    if (val.pmpm_cents == null) {
+      ctx.addIssue({ code: "custom", path: ["pmpm_cents"], message: "A PMPM rate needs a value." });
+    }
+    if (val.percent_bps != null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["percent_bps"],
+        message: "A PMPM rate cannot carry a percent value.",
+      });
+    }
+  } else {
+    if (val.percent_bps == null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["percent_bps"],
+        message: "A percent-of-premium rate needs a value.",
+      });
+    }
+    if (val.pmpm_cents != null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["pmpm_cents"],
+        message: "A percent-of-premium rate cannot carry a PMPM value.",
+      });
+    }
+  }
+}
+
+export const rateScheduleInsertSchema = z
+  .object({
+    carrier_id: uuid,
+    rate_type: z.enum(RATE_TYPES),
+    business_type: z.enum(BUSINESS_TYPES),
+    pmpm_cents: z.number().int().min(0).nullable().optional(),
+    percent_bps: bps.nullable().optional(),
+    effective_from: z.iso.date(),
+    effective_to: z.iso.date().nullable().optional(),
+    state: z.string().trim().nullable().optional(),
+  })
+  .superRefine(enforceRateValueRule);
+
+export const rateScheduleUpdateSchema = z
+  .object({
+    rate_type: z.enum(RATE_TYPES),
+    business_type: z.enum(BUSINESS_TYPES),
+    pmpm_cents: z.number().int().min(0).nullable(),
+    percent_bps: bps.nullable(),
+    effective_from: z.iso.date(),
+    effective_to: z.iso.date().nullable(),
+    state: z.string().trim().nullable(),
+  })
+  .partial()
+  .superRefine(enforceRateValueRule);
+
+/* carrier CSV mappings — statement-field -> CSV-header maps for the importer */
+export const csvMappingInsertSchema = z.object({
+  carrier_id: uuid,
+  name: nonEmpty,
+  mapping: z.record(z.string(), z.string()),
+  header_signature: z.string().trim().nullable().optional(),
+});
+
+export const csvMappingUpdateSchema = z
+  .object({
+    name: nonEmpty,
+    mapping: z.record(z.string(), z.string()),
+    header_signature: z.string().trim().nullable(),
+  })
+  .partial();
+
+/* policies — inserts apply defaults, updates are fully partial patches with
+ * nullable clears. */
+export const policyInsertSchema = z.object({
+  client_id: uuid,
+  carrier_id: uuid,
+  agent_id: uuid,
+  policy_number: z.string().trim().nullable().optional(),
+  carrier_member_id: z.string().trim().nullable().optional(),
+  plan_name: z.string().trim().nullable().optional(),
+  status: z.enum(POLICY_STATUSES).default("draft"),
+  member_count: z.number().int().min(1).default(1),
+  monthly_premium_cents: z.number().int().min(0).nullable().optional(),
+  effective_date: z.iso.date().nullable().optional(),
+  effectuated_at: z.iso.date().nullable().optional(),
+  termination_date: z.iso.date().nullable().optional(),
+  original_effective_date: z.iso.date().nullable().optional(),
+  notes: z.string().trim().optional(),
+});
+
+export const policyUpdateSchema = z
+  .object({
+    client_id: uuid,
+    carrier_id: uuid,
+    agent_id: uuid,
+    policy_number: z.string().trim().nullable(),
+    carrier_member_id: z.string().trim().nullable(),
+    plan_name: z.string().trim().nullable(),
+    status: z.enum(POLICY_STATUSES),
+    member_count: z.number().int().min(1),
+    monthly_premium_cents: z.number().int().min(0).nullable(),
+    effective_date: z.iso.date().nullable(),
+    effectuated_at: z.iso.date().nullable(),
+    termination_date: z.iso.date().nullable(),
+    original_effective_date: z.iso.date().nullable(),
+    notes: z.string().trim().nullable(),
+  })
+  .partial();
+
 /* documents */
 export const documentInsertSchema = z.object({
   // Documents can stand alone or attach to a client record.
@@ -126,4 +268,12 @@ export type AgentInput = z.infer<typeof agentInsertSchema>;
 export type AgentUpdate = z.infer<typeof agentUpdateSchema>;
 export type ClientInput = z.infer<typeof clientInsertSchema>;
 export type ClientUpdate = z.infer<typeof clientUpdateSchema>;
+export type CarrierInput = z.infer<typeof carrierInsertSchema>;
+export type CarrierUpdate = z.infer<typeof carrierUpdateSchema>;
+export type RateScheduleInput = z.infer<typeof rateScheduleInsertSchema>;
+export type RateScheduleUpdate = z.infer<typeof rateScheduleUpdateSchema>;
+export type CsvMappingInput = z.infer<typeof csvMappingInsertSchema>;
+export type CsvMappingUpdate = z.infer<typeof csvMappingUpdateSchema>;
+export type PolicyInput = z.infer<typeof policyInsertSchema>;
+export type PolicyUpdate = z.infer<typeof policyUpdateSchema>;
 export type DocumentInput = z.infer<typeof documentInsertSchema>;

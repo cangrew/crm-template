@@ -129,14 +129,19 @@ stable
 security definer
 set search_path = ''
 as $$
-  select public.has_role('admin', 'manager')
-    or target_agent_id = public.current_agent_id()
-    or exists (
-      select 1
-      from public.agents a
-      where a.id = target_agent_id
-        and a.agency_id = public.current_agency_id()
-    );
+  -- coalesce: comparing against a NULL current_agent_id() yields NULL, and
+  -- this predicate must be a hard false (not NULL) for non-tenants.
+  select coalesce(
+    public.has_role('admin', 'manager')
+      or target_agent_id = public.current_agent_id()
+      or exists (
+        select 1
+        from public.agents a
+        where a.id = target_agent_id
+          and a.agency_id = public.current_agency_id()
+      ),
+    false
+  );
 $$;
 
 -- ---------------------------------------------------------------------------

@@ -2,7 +2,9 @@ import {
   BookUser,
   Building2,
   FileText,
+  Landmark,
   LayoutDashboard,
+  ShieldCheck,
   UserRound,
   Users,
   type LucideIcon,
@@ -28,6 +30,7 @@ export const NAV_GROUPS: NavGroup[] = [
     group: "Workspace",
     items: [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/policies", label: "Policies", icon: ShieldCheck },
       { href: "/clients", label: "Clients", icon: BookUser },
       { href: "/documents", label: "Documents", icon: FileText },
     ],
@@ -37,6 +40,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/agents", label: "Agents", icon: UserRound },
       { href: "/agencies", label: "Agencies", icon: Building2 },
+      { href: "/carriers", label: "Carriers", icon: Landmark },
     ],
   },
   {

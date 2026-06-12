@@ -12,19 +12,29 @@ export function TableCard({
   count,
   isEmpty,
   emptyText,
+  action,
   children,
 }: {
   title: ReactNode;
   count?: number;
   isEmpty: boolean;
   emptyText: string;
+  /** Optional trailing header control (e.g. an "Add" button) after the count. */
+  action?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <InfoCard
       title={title}
       padded={false}
-      action={count != null ? <Badge tone="t-slate">{count}</Badge> : undefined}
+      action={
+        count != null || action ? (
+          <span className="flex items-center gap-2.5">
+            {count != null && <Badge tone="t-slate">{count}</Badge>}
+            {action}
+          </span>
+        ) : undefined
+      }
     >
       {isEmpty ? (
         <div className="p-5">

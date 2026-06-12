@@ -16,6 +16,7 @@ import {
   draftToPatch,
 } from "@/components/clients/detail/client-draft";
 import { ClientDocumentsTable } from "@/components/clients/detail/client-documents-table";
+import { ClientPoliciesTable } from "@/components/clients/detail/client-policies-table";
 import { ClientProfileCard } from "@/components/clients/detail/client-profile-card";
 import { ClientBadge } from "@/components/ui/badges";
 import { Btn } from "@/components/ui/btn";
@@ -29,6 +30,7 @@ import {
   useCurrentProfile,
   useDeleteClient,
   useDocumentsByClient,
+  usePoliciesByClient,
   useUpdateClient,
 } from "@/lib/data/hooks";
 import { clientUpdateSchema, type ClientUpdate } from "@/lib/domain/schemas";
@@ -39,6 +41,7 @@ export default function ClientDetailPage() {
   const router = useRouter();
   const clientQ = useClient(id);
   const documentsQ = useDocumentsByClient(id);
+  const policiesQ = usePoliciesByClient(id);
   const agentsQ = useAgents();
   const updateClient = useUpdateClient();
   const deleteClient = useDeleteClient();
@@ -155,7 +158,12 @@ export default function ClientDetailPage() {
             onField={edit.setField}
           />
         }
-        right={<ClientDocumentsTable documents={documentsQ.data ?? []} />}
+        right={
+          <div className="grid gap-6">
+            <ClientPoliciesTable policies={policiesQ.data ?? []} />
+            <ClientDocumentsTable documents={documentsQ.data ?? []} />
+          </div>
+        }
       />
 
       <ConfirmDialog

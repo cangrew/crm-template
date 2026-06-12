@@ -18,7 +18,7 @@ function isRouteOrChild(pathname: string, base: string): boolean {
 }
 
 /** Areas only Findway staff (admin/manager) may view. */
-const STAFF_ONLY_PATHS = ["/agents", "/agencies"] as const;
+const STAFF_ONLY_PATHS = ["/agents", "/agencies", "/carriers"] as const;
 
 /**
  * Whether a role may view a given route. Mirrors the RBAC matrix: /settings

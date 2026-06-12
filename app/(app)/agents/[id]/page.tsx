@@ -11,11 +11,11 @@ import {
   draftFromAgent,
   draftToPatch,
 } from "@/components/agents/detail/agent-draft";
+import { AgentPoliciesTable } from "@/components/agents/detail/agent-policies-table";
 import { AgentProfileCard } from "@/components/agents/detail/agent-profile-card";
 import { AgentBadge } from "@/components/ui/badges";
 import { Btn } from "@/components/ui/btn";
 import { AgentStatusPicker } from "@/components/ui/agent-status-picker";
-import { InfoCard } from "@/components/common/info-card";
 import { ConfirmDialog } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { can } from "@/lib/auth/roles";
@@ -24,6 +24,7 @@ import {
   useAgent,
   useCurrentProfile,
   useDeleteAgent,
+  usePoliciesByAgent,
   useUpdateAgent,
 } from "@/lib/data/hooks";
 import { agentUpdateSchema, type AgentUpdate } from "@/lib/domain/schemas";
@@ -34,6 +35,7 @@ export default function AgentDetailPage() {
   const router = useRouter();
   const agentQ = useAgent(id);
   const agenciesQ = useAgencies();
+  const policiesQ = usePoliciesByAgent(id);
   const updateAgent = useUpdateAgent();
   const deleteAgent = useDeleteAgent();
   const profileQ = useCurrentProfile();
@@ -153,13 +155,7 @@ export default function AgentDetailPage() {
             onField={edit.setField}
           />
         }
-        right={
-          <InfoCard title="Production">
-            <p className="muted text-[13.5px]">
-              Policies and commission history will appear here once those modules land.
-            </p>
-          </InfoCard>
-        }
+        right={<AgentPoliciesTable policies={policiesQ.data ?? []} />}
       />
 
       <ConfirmDialog

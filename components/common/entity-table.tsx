@@ -23,16 +23,25 @@ export function EntityTable<T extends { id: string }>({
   rows,
   columns,
   emptyText,
+  action,
   clickableRows = false,
 }: {
   title: ReactNode;
   rows: readonly T[];
   columns: readonly EntityColumn<T>[];
   emptyText: string;
+  /** Optional header control (e.g. an "Add" button) rendered after the count. */
+  action?: ReactNode;
   clickableRows?: boolean;
 }) {
   return (
-    <TableCard title={title} count={rows.length} isEmpty={rows.length === 0} emptyText={emptyText}>
+    <TableCard
+      title={title}
+      count={rows.length}
+      isEmpty={rows.length === 0}
+      emptyText={emptyText}
+      action={action}
+    >
       <Table>
         <thead>
           <tr>

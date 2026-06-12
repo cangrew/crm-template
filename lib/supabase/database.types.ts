@@ -128,6 +128,71 @@ export type Database = {
           },
         ];
       };
+      carrier_csv_mappings: {
+        Row: {
+          carrier_id: string;
+          created_at: string;
+          header_signature: string | null;
+          id: string;
+          mapping: Json;
+          name: string;
+          updated_at: string;
+        };
+        Insert: {
+          carrier_id: string;
+          created_at?: string;
+          header_signature?: string | null;
+          id?: string;
+          mapping: Json;
+          name: string;
+          updated_at?: string;
+        };
+        Update: {
+          carrier_id?: string;
+          created_at?: string;
+          header_signature?: string | null;
+          id?: string;
+          mapping?: Json;
+          name?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "carrier_csv_mappings_carrier_id_fkey";
+            columns: ["carrier_id"];
+            isOneToOne: false;
+            referencedRelation: "carriers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      carriers: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+          notes: string | null;
+          status: Database["public"]["Enums"]["carrier_status"];
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+          notes?: string | null;
+          status?: Database["public"]["Enums"]["carrier_status"];
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          name?: string;
+          notes?: string | null;
+          status?: Database["public"]["Enums"]["carrier_status"];
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       clients: {
         Row: {
           address: string | null;
@@ -309,6 +374,98 @@ export type Database = {
           },
         ];
       };
+      policies: {
+        Row: {
+          agent_id: string;
+          carrier_id: string;
+          carrier_member_id: string | null;
+          client_id: string;
+          created_at: string;
+          created_by: string | null;
+          effective_date: string | null;
+          effectuated_at: string | null;
+          id: string;
+          member_count: number;
+          monthly_premium_cents: number | null;
+          notes: string | null;
+          original_effective_date: string | null;
+          plan_name: string | null;
+          policy_number: string | null;
+          status: Database["public"]["Enums"]["policy_status"];
+          termination_date: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          agent_id: string;
+          carrier_id: string;
+          carrier_member_id?: string | null;
+          client_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          effective_date?: string | null;
+          effectuated_at?: string | null;
+          id?: string;
+          member_count?: number;
+          monthly_premium_cents?: number | null;
+          notes?: string | null;
+          original_effective_date?: string | null;
+          plan_name?: string | null;
+          policy_number?: string | null;
+          status?: Database["public"]["Enums"]["policy_status"];
+          termination_date?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          agent_id?: string;
+          carrier_id?: string;
+          carrier_member_id?: string | null;
+          client_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          effective_date?: string | null;
+          effectuated_at?: string | null;
+          id?: string;
+          member_count?: number;
+          monthly_premium_cents?: number | null;
+          notes?: string | null;
+          original_effective_date?: string | null;
+          plan_name?: string | null;
+          policy_number?: string | null;
+          status?: Database["public"]["Enums"]["policy_status"];
+          termination_date?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "policies_agent_id_fkey";
+            columns: ["agent_id"];
+            isOneToOne: false;
+            referencedRelation: "agents";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "policies_carrier_id_fkey";
+            columns: ["carrier_id"];
+            isOneToOne: false;
+            referencedRelation: "carriers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "policies_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "policies_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           created_at: string;
@@ -335,6 +492,56 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"] | null;
         };
         Relationships: [];
+      };
+      rate_schedules: {
+        Row: {
+          business_type: Database["public"]["Enums"]["business_type"];
+          carrier_id: string;
+          created_at: string;
+          effective_from: string;
+          effective_to: string | null;
+          id: string;
+          pmpm_cents: number | null;
+          percent_bps: number | null;
+          rate_type: Database["public"]["Enums"]["rate_type"];
+          state: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          business_type: Database["public"]["Enums"]["business_type"];
+          carrier_id: string;
+          created_at?: string;
+          effective_from: string;
+          effective_to?: string | null;
+          id?: string;
+          pmpm_cents?: number | null;
+          percent_bps?: number | null;
+          rate_type: Database["public"]["Enums"]["rate_type"];
+          state?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          business_type?: Database["public"]["Enums"]["business_type"];
+          carrier_id?: string;
+          created_at?: string;
+          effective_from?: string;
+          effective_to?: string | null;
+          id?: string;
+          pmpm_cents?: number | null;
+          percent_bps?: number | null;
+          rate_type?: Database["public"]["Enums"]["rate_type"];
+          state?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "rate_schedules_carrier_id_fkey";
+            columns: ["carrier_id"];
+            isOneToOne: false;
+            referencedRelation: "carriers";
+            referencedColumns: ["id"];
+          },
+        ];
       };
     };
     Views: {
@@ -382,6 +589,8 @@ export type Database = {
       agency_status: "active" | "inactive";
       agent_status: "active" | "inactive" | "terminated";
       app_role: "admin" | "manager" | "agent" | "agency_owner";
+      business_type: "new_business" | "renewal";
+      carrier_status: "active" | "inactive";
       client_status: "prospect" | "active" | "inactive";
       notification_priority: "normal" | "high";
       notification_type:
@@ -390,6 +599,16 @@ export type Database = {
         | "statement_posted"
         | "lines_unmatched"
         | "payout_finalized";
+      policy_status:
+        | "draft"
+        | "submitted"
+        | "active"
+        | "grace"
+        | "lapsed"
+        | "cancelled"
+        | "terminated"
+        | "renewed";
+      rate_type: "pmpm" | "percent_of_premium";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -521,6 +740,8 @@ export const Constants = {
       agency_status: ["active", "inactive"],
       agent_status: ["active", "inactive", "terminated"],
       app_role: ["admin", "manager", "agent", "agency_owner"],
+      business_type: ["new_business", "renewal"],
+      carrier_status: ["active", "inactive"],
       client_status: ["prospect", "active", "inactive"],
       notification_priority: ["normal", "high"],
       notification_type: [
@@ -530,6 +751,17 @@ export const Constants = {
         "lines_unmatched",
         "payout_finalized",
       ],
+      policy_status: [
+        "draft",
+        "submitted",
+        "active",
+        "grace",
+        "lapsed",
+        "cancelled",
+        "terminated",
+        "renewed",
+      ],
+      rate_type: ["pmpm", "percent_of_premium"],
     },
   },
 } as const;

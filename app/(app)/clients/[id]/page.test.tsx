@@ -37,6 +37,7 @@ vi.mock("@/lib/data/hooks", () => ({
     refetch: mockRefetch,
   }),
   useDocumentsByClient: () => ({ data: documentsData }),
+  usePoliciesByClient: () => ({ data: [] }),
   useAgents: () => ({ data: [{ id: "a1", full_name: "Casey Agent" }] }),
   useUpdateClient: () => ({
     mutate: mockUpdateMutate,
@@ -123,6 +124,10 @@ vi.mock("@/components/clients/detail/client-profile-card", () => ({
 
 vi.mock("@/components/clients/detail/client-documents-table", () => ({
   ClientDocumentsTable: () => <div data-testid="client-documents-table" />,
+}));
+
+vi.mock("@/components/clients/detail/client-policies-table", () => ({
+  ClientPoliciesTable: () => <div data-testid="client-policies-table" />,
 }));
 
 vi.mock("@/components/clients/detail/client-draft", () => ({

@@ -26,7 +26,7 @@ describe("canAccessPath", () => {
   });
 
   it("restricts agency management areas to staff", () => {
-    for (const base of ["/agents", "/agencies"] as const) {
+    for (const base of ["/agents", "/agencies", "/carriers"] as const) {
       expect(canAccessPath(base, "admin")).toBe(true);
       expect(canAccessPath(base, "manager")).toBe(true);
       expect(canAccessPath(base, "agent")).toBe(false);
@@ -41,6 +41,8 @@ describe("canAccessPath", () => {
     for (const role of ["admin", "manager", "agent", "agency_owner"] as const) {
       expect(canAccessPath("/", role)).toBe(true);
       expect(canAccessPath("/clients", role)).toBe(true);
+      expect(canAccessPath("/policies", role)).toBe(true);
+      expect(canAccessPath("/policies/some-id", role)).toBe(true);
       expect(canAccessPath("/documents", role)).toBe(true);
       expect(canAccessPath("/account", role)).toBe(true);
     }

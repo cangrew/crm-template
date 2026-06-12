@@ -10,6 +10,13 @@
 --                    span Casey, Harper, Devon, and unassigned (house).
 --   documents.kind:  contract, invoice, other (paths only; no objects are
 --                    uploaded, so downloads exercise the error-toast path).
+--   carriers:        active (Ambetter, Oscar) and inactive (Molina); rate
+--                    schedules cover both rate types, both business types, an
+--                    open-ended window, and a superseded (closed) window; one
+--                    CSV mapping with a header signature for the importer.
+--   policy_status:   every value represented across the seeded clients,
+--                    agents, and carriers; the renewed policy carries an
+--                    original_effective_date a year before its effective date.
 --   notifications:   the client inserts below fire the client_created trigger,
 --                    so bells are pre-populated on first sign-in (the superuser
 --                    actor is null, which notifies every eligible staff role).
@@ -93,6 +100,59 @@ insert into public.clients (id, first_name, last_name, dob, email, phone, addres
   ('10000000-0000-4000-8000-000000000006', 'Harold', 'Nakamura',  '1946-05-17', 'harold.nakamura@example.com', '+1 555 0106', '3 Seabreeze Ln, Sarasota, FL',   'inactive', '30000000-0000-4000-8000-000000000003', 'Moved out of state; plan terminated.', '00000000-0000-4000-8000-000000000001'),
   ('10000000-0000-4000-8000-000000000007', 'Denise', 'Okafor',    '1971-12-05', 'denise.okafor@example.com',   '+1 555 0107', '940 Cypress Rd, Jacksonville, FL', 'prospect', null, 'Walk-in lead; not yet assigned to an agent.', '00000000-0000-4000-8000-000000000002'),
   ('10000000-0000-4000-8000-000000000008', 'Frank',  'Delgado',   '1953-08-26', 'frank.delgado@example.com',   '+1 555 0108', '12 Harbor View Blvd, St. Petersburg, FL', 'inactive', null, 'Lapsed last year; re-engage during AEP.', '00000000-0000-4000-8000-000000000001');
+
+-- ---------------------------------------------------------------------------
+-- Carriers — two active, one inactive.
+-- ---------------------------------------------------------------------------
+insert into public.carriers (id, name, status, notes) values
+  ('40000000-0000-4000-8000-000000000001', 'Ambetter Health',   'active',   'Flat PMPM payer; statements arrive around the 15th.'),
+  ('40000000-0000-4000-8000-000000000002', 'Oscar Health',      'active',   'Pays a percentage of premium; NB and renewal rates differ.'),
+  ('40000000-0000-4000-8000-000000000003', 'Molina Healthcare', 'inactive', 'No longer writing new business with us.');
+
+-- ---------------------------------------------------------------------------
+-- Rate schedules — Ambetter pays flat PMPM (with a superseded 2025 window),
+-- Oscar pays percent of premium. All open-ended from 2026-01-01 except the
+-- closed 2025 Ambetter window.
+-- ---------------------------------------------------------------------------
+insert into public.rate_schedules (id, carrier_id, rate_type, business_type, pmpm_cents, percent_bps, effective_from, effective_to, state) values
+  ('41000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', 'pmpm',               'new_business', 2200, null, '2026-01-01', null,         null),
+  ('41000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000001', 'pmpm',               'renewal',      1100, null, '2026-01-01', null,         null),
+  ('41000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000002', 'percent_of_premium', 'new_business', null, 500,  '2026-01-01', null,         null),
+  ('41000000-0000-4000-8000-000000000004', '40000000-0000-4000-8000-000000000002', 'percent_of_premium', 'renewal',      null, 300,  '2026-01-01', null,         null),
+  ('41000000-0000-4000-8000-000000000005', '40000000-0000-4000-8000-000000000001', 'pmpm',               'new_business', 2000, null, '2025-01-01', '2025-12-31', null);
+
+-- ---------------------------------------------------------------------------
+-- Carrier CSV mappings — how Ambetter's monthly statement columns map onto
+-- the importer's statement fields; the header signature auto-matches uploads.
+-- ---------------------------------------------------------------------------
+insert into public.carrier_csv_mappings (id, carrier_id, name, mapping, header_signature) values
+  ('42000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', 'Ambetter monthly statement',
+   '{"policy_number":"Policy ID","carrier_member_id":"Member ID","subscriber_name":"Subscriber","subscriber_dob":"DOB","member_count":"Members","premium":"Premium","amount":"Commission Paid","period":"Coverage Month"}',
+   'policy id|member id|subscriber|dob|members|premium|commission paid|coverage month');
+
+-- ---------------------------------------------------------------------------
+-- Policies — every status represented, spread across the seeded clients,
+-- agents (Casey, Harper, Devon), and carriers. The renewed policy's
+-- original_effective_date sits a year before its effective date; new business
+-- carries original_effective_date = effective_date.
+-- ---------------------------------------------------------------------------
+insert into public.policies (id, client_id, carrier_id, agent_id, policy_number, carrier_member_id, plan_name, status, member_count, monthly_premium_cents, effective_date, effectuated_at, termination_date, original_effective_date, notes, created_by) values
+  ('50000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001',
+   'AMB-2026-0001', 'U7100231', 'Ambetter Balanced Care 11', 'active', 2, 78000, '2026-01-01', '2026-01-04', null, '2026-01-01', null, '00000000-0000-4000-8000-000000000001'),
+  ('50000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000001',
+   'OSC-2026-0114', 'OSC88412', 'Oscar Bronze Classic', 'active', 1, 42000, '2026-02-01', '2026-02-03', null, '2026-02-01', null, '00000000-0000-4000-8000-000000000002'),
+  ('50000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000002',
+   'AMB-2026-0042', 'U7100977', 'Ambetter Complete Silver', 'grace', 3, 95000, '2026-01-01', '2026-01-09', null, '2026-01-01', 'Missed the May premium; in the grace window.', '00000000-0000-4000-8000-000000000002'),
+  ('50000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000004', '40000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000002',
+   'OSC-2026-0287', 'OSC90233', 'Oscar Silver Saver', 'lapsed', 1, 51000, '2026-01-01', '2026-01-06', null, '2026-01-01', 'Grace period exhausted in April.', '00000000-0000-4000-8000-000000000001'),
+  ('50000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000005', '40000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000003',
+   null, null, 'Ambetter Everyday Bronze', 'draft', 2, 64000, '2026-07-01', null, null, '2026-07-01', 'Quoting; waiting on income verification.', '00000000-0000-4000-8000-000000000002'),
+  ('50000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000006', '40000000-0000-4000-8000-000000000003', '30000000-0000-4000-8000-000000000003',
+   'MOL-2026-0033', 'MHC55102', 'Molina Core Care Select', 'cancelled', 1, 35000, '2026-01-01', null, '2026-02-28', '2026-01-01', 'Cancelled before effectuation; member moved out of state.', '00000000-0000-4000-8000-000000000001'),
+  ('50000000-0000-4000-8000-000000000007', '10000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000001',
+   'OSC-2026-0501', 'OSC91488', 'Oscar Gold Family', 'submitted', 4, 120000, '2026-06-01', null, null, '2026-06-01', 'Family add-on application pending carrier review.', '00000000-0000-4000-8000-000000000002'),
+  ('50000000-0000-4000-8000-000000000008', '10000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001',
+   'AMB-2025-0918', 'U7099812', 'Ambetter Balanced Care 4', 'renewed', 1, 39000, '2026-01-01', '2026-01-02', null, '2025-01-01', 'Renewal of the 2025 plan; pays the renewal PMPM rate.', '00000000-0000-4000-8000-000000000001');
 
 -- ---------------------------------------------------------------------------
 -- Documents — metadata rows only (no storage objects are seeded, so the

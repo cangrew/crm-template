@@ -3,7 +3,15 @@ import { can, isAdmin, isStaff } from "./roles";
 
 describe("can() permission matrix", () => {
   it("grants admins full CRUD on every resource", () => {
-    for (const resource of ["clients", "documents", "users", "agents", "agencies"] as const) {
+    for (const resource of [
+      "clients",
+      "documents",
+      "users",
+      "agents",
+      "agencies",
+      "carriers",
+      "policies",
+    ] as const) {
       for (const action of ["create", "read", "update", "delete"] as const) {
         expect(can("admin", action, resource)).toBe(true);
       }
@@ -21,6 +29,12 @@ describe("can() permission matrix", () => {
     expect(can("manager", "update", "agencies")).toBe(true);
     expect(can("manager", "delete", "agents")).toBe(false);
     expect(can("manager", "delete", "agencies")).toBe(false);
+    expect(can("manager", "create", "carriers")).toBe(true);
+    expect(can("manager", "update", "carriers")).toBe(true);
+    expect(can("manager", "delete", "carriers")).toBe(false);
+    expect(can("manager", "create", "policies")).toBe(true);
+    expect(can("manager", "update", "policies")).toBe(true);
+    expect(can("manager", "delete", "policies")).toBe(false);
     expect(can("manager", "read", "users")).toBe(false);
     expect(can("manager", "update", "users")).toBe(false);
   });
@@ -29,8 +43,18 @@ describe("can() permission matrix", () => {
     expect(can("agent", "read", "clients")).toBe(true);
     expect(can("agent", "read", "documents")).toBe(true);
     expect(can("agent", "read", "agents")).toBe(true);
+    expect(can("agent", "read", "policies")).toBe(true);
     expect(can("agent", "read", "agencies")).toBe(false);
-    for (const resource of ["clients", "documents", "users", "agents", "agencies"] as const) {
+    expect(can("agent", "read", "carriers")).toBe(false);
+    for (const resource of [
+      "clients",
+      "documents",
+      "users",
+      "agents",
+      "agencies",
+      "carriers",
+      "policies",
+    ] as const) {
       for (const action of ["create", "update", "delete"] as const) {
         expect(can("agent", action, resource)).toBe(false);
       }
@@ -43,7 +67,17 @@ describe("can() permission matrix", () => {
     expect(can("agency_owner", "read", "documents")).toBe(true);
     expect(can("agency_owner", "read", "agents")).toBe(true);
     expect(can("agency_owner", "read", "agencies")).toBe(true);
-    for (const resource of ["clients", "documents", "users", "agents", "agencies"] as const) {
+    expect(can("agency_owner", "read", "policies")).toBe(true);
+    expect(can("agency_owner", "read", "carriers")).toBe(false);
+    for (const resource of [
+      "clients",
+      "documents",
+      "users",
+      "agents",
+      "agencies",
+      "carriers",
+      "policies",
+    ] as const) {
       for (const action of ["create", "update", "delete"] as const) {
         expect(can("agency_owner", action, resource)).toBe(false);
       }
