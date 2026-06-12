@@ -1,21 +1,152 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ContactStatus } from "@/lib/domain/enums";
+import type { AgencyStatus, AgentStatus, ContactStatus } from "@/lib/domain/enums";
 import type { NotificationType } from "@/lib/domain/notifications";
 import type {
+  AgencyInput,
+  AgencyUpdate,
+  AgentInput,
+  AgentUpdate,
   ContactInput,
   ContactUpdate,
   DocumentInput,
   ProfileUpdate,
 } from "@/lib/domain/schemas";
 import { createClient } from "@/lib/supabase/client";
+import * as agenciesApi from "./agencies";
+import * as agentsApi from "./agents";
 import * as contactsApi from "./contacts";
 import * as documentsApi from "./documents";
 import * as notificationPreferencesApi from "./notification-preferences";
 import * as notificationsApi from "./notifications";
 import * as profilesApi from "./profiles";
 import { queryKeys } from "./query-keys";
+
+/* ------------------------------------------------------------- agencies --- */
+export function useAgencies() {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.agencies.lists(),
+    queryFn: () => agenciesApi.listAgencies(supabase),
+  });
+}
+
+export function useAgency(id: string) {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.agencies.detail(id),
+    queryFn: () => agenciesApi.getAgency(supabase, id),
+    enabled: Boolean(id),
+  });
+}
+
+export function useCreateAgency() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: AgencyInput) => agenciesApi.createAgency(supabase, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.agencies.all }),
+  });
+}
+
+export function useUpdateAgency() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: AgencyUpdate }) =>
+      agenciesApi.updateAgency(supabase, id, patch),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.agencies.all });
+      // Cut changes alter how agents' future commissions split.
+      qc.invalidateQueries({ queryKey: queryKeys.agents.all });
+    },
+  });
+}
+
+export function useUpdateAgencyStatus() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: AgencyStatus }) =>
+      agenciesApi.updateAgencyStatus(supabase, id, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.agencies.all }),
+  });
+}
+
+export function useDeleteAgency() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => agenciesApi.deleteAgency(supabase, id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.agencies.all }),
+  });
+}
+
+/* --------------------------------------------------------------- agents --- */
+export function useAgents() {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.agents.lists(),
+    queryFn: () => agentsApi.listAgents(supabase),
+  });
+}
+
+export function useAgent(id: string) {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.agents.detail(id),
+    queryFn: () => agentsApi.getAgent(supabase, id),
+    enabled: Boolean(id),
+  });
+}
+
+export function useAgentsByAgency(agencyId: string) {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: queryKeys.agents.byAgency(agencyId),
+    queryFn: () => agentsApi.listAgentsByAgency(supabase, agencyId),
+    enabled: Boolean(agencyId),
+  });
+}
+
+export function useCreateAgent() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: AgentInput) => agentsApi.createAgent(supabase, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.agents.all }),
+  });
+}
+
+export function useUpdateAgent() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: AgentUpdate }) =>
+      agentsApi.updateAgent(supabase, id, patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.agents.all }),
+  });
+}
+
+export function useUpdateAgentStatus() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: AgentStatus }) =>
+      agentsApi.updateAgentStatus(supabase, id, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.agents.all }),
+  });
+}
+
+export function useDeleteAgent() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => agentsApi.deleteAgent(supabase, id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.agents.all }),
+  });
+}
 
 /* ------------------------------------------------------------- contacts --- */
 /* EXAMPLE ENTITY — safe to delete; see README "Removing the example entity".

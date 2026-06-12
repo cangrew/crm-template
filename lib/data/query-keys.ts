@@ -4,6 +4,17 @@
  * every new entity (see `contacts` for the canonical shape).
  */
 export const queryKeys = {
+  agencies: {
+    all: ["agencies"] as const,
+    lists: () => ["agencies", "list"] as const,
+    detail: (id: string) => ["agencies", "detail", id] as const,
+  },
+  agents: {
+    all: ["agents"] as const,
+    lists: () => ["agents", "list"] as const,
+    detail: (id: string) => ["agents", "detail", id] as const,
+    byAgency: (agencyId: string) => ["agents", "byAgency", agencyId] as const,
+  },
   contacts: {
     all: ["contacts"] as const,
     lists: () => ["contacts", "list"] as const,

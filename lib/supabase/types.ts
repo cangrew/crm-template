@@ -12,6 +12,8 @@ export type TablesUpdate<T extends keyof PublicSchema["Tables"]> =
   PublicSchema["Tables"][T]["Update"];
 
 export type Profile = Tables<"profiles">;
+export type Agency = Tables<"agencies">;
+export type Agent = Tables<"agents">;
 export type Contact = Tables<"contacts">;
 export type DocumentRow = Tables<"documents">;
 export type Notification = Tables<"notifications">;

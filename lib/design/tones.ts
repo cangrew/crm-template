@@ -1,4 +1,4 @@
-import type { ContactStatus } from "@/lib/domain/enums";
+import type { AgencyStatus, AgentStatus, ContactStatus } from "@/lib/domain/enums";
 
 /** Badge tone tokens (see components/ui/badge.tsx). */
 export type Tone =
@@ -21,4 +21,15 @@ export const contactTone: Record<ContactStatus, Tone> = {
   active: "t-green",
   at_risk: "t-red",
   closed: "t-slate",
+};
+
+export const agencyTone: Record<AgencyStatus, Tone> = {
+  active: "t-green",
+  inactive: "t-slate",
+};
+
+export const agentTone: Record<AgentStatus, Tone> = {
+  active: "t-green",
+  inactive: "t-slate",
+  terminated: "t-red",
 };

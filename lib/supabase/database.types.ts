@@ -30,6 +30,104 @@ export type Database = {
   };
   public: {
     Tables: {
+      agencies: {
+        Row: {
+          commission_cut_bps: number;
+          created_at: string;
+          id: string;
+          name: string;
+          notes: string | null;
+          override_cut_bps: number;
+          owner_profile_id: string | null;
+          status: Database["public"]["Enums"]["agency_status"];
+          updated_at: string;
+        };
+        Insert: {
+          commission_cut_bps?: number;
+          created_at?: string;
+          id?: string;
+          name: string;
+          notes?: string | null;
+          override_cut_bps?: number;
+          owner_profile_id?: string | null;
+          status?: Database["public"]["Enums"]["agency_status"];
+          updated_at?: string;
+        };
+        Update: {
+          commission_cut_bps?: number;
+          created_at?: string;
+          id?: string;
+          name?: string;
+          notes?: string | null;
+          override_cut_bps?: number;
+          owner_profile_id?: string | null;
+          status?: Database["public"]["Enums"]["agency_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "agencies_owner_profile_id_fkey";
+            columns: ["owner_profile_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      agents: {
+        Row: {
+          agency_id: string | null;
+          commission_split_bps: number;
+          created_at: string;
+          email: string | null;
+          full_name: string;
+          id: string;
+          npn: string | null;
+          profile_id: string | null;
+          status: Database["public"]["Enums"]["agent_status"];
+          updated_at: string;
+        };
+        Insert: {
+          agency_id?: string | null;
+          commission_split_bps?: number;
+          created_at?: string;
+          email?: string | null;
+          full_name: string;
+          id?: string;
+          npn?: string | null;
+          profile_id?: string | null;
+          status?: Database["public"]["Enums"]["agent_status"];
+          updated_at?: string;
+        };
+        Update: {
+          agency_id?: string | null;
+          commission_split_bps?: number;
+          created_at?: string;
+          email?: string | null;
+          full_name?: string;
+          id?: string;
+          npn?: string | null;
+          profile_id?: string | null;
+          status?: Database["public"]["Enums"]["agent_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "agents_agency_id_fkey";
+            columns: ["agency_id"];
+            isOneToOne: false;
+            referencedRelation: "agencies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "agents_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       contacts: {
         Row: {
           company: string | null;
@@ -227,6 +325,18 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      can_access_agent: {
+        Args: { target_agent_id: string };
+        Returns: boolean;
+      };
+      current_agency_id: {
+        Args: never;
+        Returns: string;
+      };
+      current_agent_id: {
+        Args: never;
+        Returns: string;
+      };
       current_app_role: {
         Args: never;
         Returns: Database["public"]["Enums"]["app_role"];
@@ -253,6 +363,8 @@ export type Database = {
       };
     };
     Enums: {
+      agency_status: "active" | "inactive";
+      agent_status: "active" | "inactive" | "terminated";
       app_role: "admin" | "manager" | "agent" | "agency_owner";
       contact_status: "lead" | "active" | "at_risk" | "closed";
       notification_priority: "normal" | "high";
@@ -385,6 +497,8 @@ export const Constants = {
   },
   public: {
     Enums: {
+      agency_status: ["active", "inactive"],
+      agent_status: ["active", "inactive", "terminated"],
       app_role: ["admin", "manager", "agent", "agency_owner"],
       contact_status: ["lead", "active", "at_risk", "closed"],
       notification_priority: ["normal", "high"],

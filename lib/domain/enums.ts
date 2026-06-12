@@ -14,6 +14,25 @@ export const APP_ROLE_LABELS: Record<AppRole, string> = {
   agency_owner: "Agency Owner",
 };
 
+/* agencies — Findway's sub-agencies (values mirror public.agency_status) */
+export const AGENCY_STATUSES = ["active", "inactive"] as const;
+export type AgencyStatus = (typeof AGENCY_STATUSES)[number];
+
+export const AGENCY_STATUS_LABELS: Record<AgencyStatus, string> = {
+  active: "Active",
+  inactive: "Inactive",
+};
+
+/* agents — writing agents under Findway or a sub-agency (public.agent_status) */
+export const AGENT_STATUSES = ["active", "inactive", "terminated"] as const;
+export type AgentStatus = (typeof AGENT_STATUSES)[number];
+
+export const AGENT_STATUS_LABELS: Record<AgentStatus, string> = {
+  active: "Active",
+  inactive: "Inactive",
+  terminated: "Terminated",
+};
+
 /* ------------------------------------------------------------------------- *
  * EXAMPLE ENTITY (contacts) — safe to delete; see README "Removing the
  * example entity". Demonstrates the enum + label-map pattern every business

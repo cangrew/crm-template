@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  agencyInsertSchema,
+  agencyUpdateSchema,
+  agentInsertSchema,
+  agentUpdateSchema,
   contactInsertSchema,
   contactUpdateSchema,
   documentInsertSchema,
@@ -81,6 +85,87 @@ describe("profileInsertSchema", () => {
         role: "dispatcher",
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("agencyInsertSchema", () => {
+  it("accepts a minimal agency and applies defaults", () => {
+    const result = agencyInsertSchema.parse({ name: "Harbor Agency" });
+    expect(result.status).toBe("active");
+    expect(result.commission_cut_bps).toBe(0);
+    expect(result.override_cut_bps).toBe(0);
+  });
+
+  it("accepts cuts across the full basis-point range", () => {
+    const result = agencyInsertSchema.parse({
+      name: "Harbor Agency",
+      commission_cut_bps: 10000,
+      override_cut_bps: 0,
+    });
+    expect(result.commission_cut_bps).toBe(10000);
+  });
+
+  it("rejects out-of-range or fractional basis points", () => {
+    expect(agencyInsertSchema.safeParse({ name: "X", commission_cut_bps: 10001 }).success).toBe(
+      false,
+    );
+    expect(agencyInsertSchema.safeParse({ name: "X", override_cut_bps: -1 }).success).toBe(false);
+    expect(agencyInsertSchema.safeParse({ name: "X", commission_cut_bps: 12.5 }).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects a blank name", () => {
+    expect(agencyInsertSchema.safeParse({ name: "  " }).success).toBe(false);
+  });
+});
+
+describe("agencyUpdateSchema", () => {
+  it("accepts a partial cut adjustment", () => {
+    const result = agencyUpdateSchema.parse({ commission_cut_bps: 5500 });
+    expect(result.commission_cut_bps).toBe(5500);
+    expect(result.name).toBeUndefined();
+  });
+
+  it("allows detaching the owner profile", () => {
+    expect(agencyUpdateSchema.parse({ owner_profile_id: null }).owner_profile_id).toBeNull();
+  });
+});
+
+describe("agentInsertSchema", () => {
+  it("accepts a minimal agent and applies defaults", () => {
+    const result = agentInsertSchema.parse({ full_name: "Andy Agent" });
+    expect(result.status).toBe("active");
+    expect(result.commission_split_bps).toBe(8000);
+    expect(result.agency_id).toBeUndefined();
+  });
+
+  it("accepts a direct (house) agent with a null agency", () => {
+    const result = agentInsertSchema.parse({ full_name: "Dina Direct", agency_id: null });
+    expect(result.agency_id).toBeNull();
+  });
+
+  it("rejects an out-of-range split", () => {
+    expect(
+      agentInsertSchema.safeParse({ full_name: "X", commission_split_bps: 10500 }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a malformed email", () => {
+    expect(agentInsertSchema.safeParse({ full_name: "X", email: "nope" }).success).toBe(false);
+  });
+});
+
+describe("agentUpdateSchema", () => {
+  it("accepts a partial patch and nullable clears", () => {
+    const result = agentUpdateSchema.parse({ status: "terminated", agency_id: null, npn: null });
+    expect(result.status).toBe("terminated");
+    expect(result.agency_id).toBeNull();
+    expect(result.npn).toBeNull();
+  });
+
+  it("rejects an unknown status", () => {
+    expect(agentUpdateSchema.safeParse({ status: "retired" }).success).toBe(false);
   });
 });
 
