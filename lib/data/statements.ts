@@ -68,6 +68,23 @@ export async function createStatement(
   return data;
 }
 
+/** Patch import metadata on a staged statement (e.g. the raw-CSV storage_path
+ * once the audit copy uploads). Status and rollups stay server-managed. */
+export async function updateStatement(
+  supabase: TypedSupabaseClient,
+  id: string,
+  patch: Pick<TablesUpdate<"commission_statements">, "storage_path">,
+): Promise<CommissionStatement> {
+  const { data, error } = await supabase
+    .from("commission_statements")
+    .update(patch)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function deleteStatement(supabase: TypedSupabaseClient, id: string): Promise<void> {
   const { error } = await supabase.from("commission_statements").delete().eq("id", id);
   if (error) throw error;
@@ -100,13 +117,17 @@ export async function bulkInsertLines(
   }
 }
 
-export async function setLineMatch(
+/** The line columns staff may edit before posting: match resolution fields
+ * plus line_kind reclassification. Amounts and raw stay immutable. */
+export type StatementLinePatch = Pick<
+  TablesUpdate<"statement_lines">,
+  "match_status" | "matched_policy_id" | "match_reason" | "line_kind"
+>;
+
+export async function updateLine(
   supabase: TypedSupabaseClient,
   lineId: string,
-  patch: Pick<
-    TablesUpdate<"statement_lines">,
-    "match_status" | "matched_policy_id" | "match_reason"
-  >,
+  patch: StatementLinePatch,
 ): Promise<StatementLine> {
   const { data, error } = await supabase
     .from("statement_lines")
@@ -116,6 +137,14 @@ export async function setLineMatch(
     .single();
   if (error) throw error;
   return data;
+}
+
+export async function setLineMatch(
+  supabase: TypedSupabaseClient,
+  lineId: string,
+  patch: Pick<StatementLinePatch, "match_status" | "matched_policy_id" | "match_reason">,
+): Promise<StatementLine> {
+  return updateLine(supabase, lineId, patch);
 }
 
 /** Atomically persist the engine's allocations via the post_statement RPC. */

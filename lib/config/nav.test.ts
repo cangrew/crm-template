@@ -9,7 +9,14 @@ describe("NAV_GROUPS", () => {
     expect(hrefs).toContain("/clients");
     expect(hrefs).toContain("/documents");
     expect(hrefs).toContain("/carriers");
+    expect(hrefs).toContain("/statements");
     expect(hrefs).toContain("/settings/users");
+  });
+
+  it("places the Commissions group between Workspace and Agency", () => {
+    const groups = NAV_GROUPS.map((g) => g.group);
+    expect(groups.indexOf("Commissions")).toBe(groups.indexOf("Workspace") + 1);
+    expect(groups.indexOf("Agency")).toBe(groups.indexOf("Commissions") + 1);
   });
 });
 

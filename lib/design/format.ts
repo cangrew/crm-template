@@ -19,6 +19,33 @@ export function fmtPct(fraction: number): string {
   return `${Number((fraction * 100).toFixed(2))}%`;
 }
 
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+
+/**
+ * Statement period months ("2026-05-01" or "2026-05") rendered as "May 2026".
+ * String-parsed (no Date) so timezones can never shift the month.
+ */
+export function fmtMonth(iso: string | null | undefined): string {
+  const m = (iso ?? "").match(/^(\d{4})-(\d{2})/);
+  if (!m) return "—";
+  const idx = Number(m[2]) - 1;
+  if (idx < 0 || idx > 11) return "—";
+  return `${MONTH_NAMES[idx]} ${m[1]}`;
+}
+
 export function fmtDateShort(iso: string | null | undefined): string {
   if (!iso) return "—";
   return iso.slice(5);

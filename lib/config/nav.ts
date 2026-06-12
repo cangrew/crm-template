@@ -1,6 +1,7 @@
 import {
   BookUser,
   Building2,
+  FileSpreadsheet,
   FileText,
   Landmark,
   LayoutDashboard,
@@ -34,6 +35,10 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/clients", label: "Clients", icon: BookUser },
       { href: "/documents", label: "Documents", icon: FileText },
     ],
+  },
+  {
+    group: "Commissions",
+    items: [{ href: "/statements", label: "Statements", icon: FileSpreadsheet }],
   },
   {
     group: "Agency",

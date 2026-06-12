@@ -4,14 +4,26 @@ import {
   AGENT_STATUS_LABELS,
   CARRIER_STATUS_LABELS,
   CLIENT_STATUS_LABELS,
+  MATCH_STATUS_LABELS,
   POLICY_STATUS_LABELS,
+  STATEMENT_STATUS_LABELS,
   type AgencyStatus,
   type AgentStatus,
   type CarrierStatus,
   type ClientStatus,
+  type MatchStatus,
   type PolicyStatus,
+  type StatementStatus,
 } from "@/lib/domain/enums";
-import { agencyTone, agentTone, carrierTone, clientTone, policyTone } from "@/lib/design/tones";
+import {
+  agencyTone,
+  agentTone,
+  carrierTone,
+  clientTone,
+  matchTone,
+  policyTone,
+  statementTone,
+} from "@/lib/design/tones";
 
 export function AgencyBadge({ status }: { status: AgencyStatus }) {
   return (
@@ -56,6 +68,24 @@ export function PolicyBadge({ status }: { status: PolicyStatus }) {
     <Badge tone={policyTone[status]}>
       <span className="bdot" />
       {POLICY_STATUS_LABELS[status]}
+    </Badge>
+  );
+}
+
+export function StatementBadge({ status }: { status: StatementStatus }) {
+  return (
+    <Badge tone={statementTone[status]}>
+      <span className="bdot" />
+      {STATEMENT_STATUS_LABELS[status]}
+    </Badge>
+  );
+}
+
+export function MatchBadge({ status }: { status: MatchStatus }) {
+  return (
+    <Badge tone={matchTone[status]}>
+      <span className="bdot" />
+      {MATCH_STATUS_LABELS[status]}
     </Badge>
   );
 }

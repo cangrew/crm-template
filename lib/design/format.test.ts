@@ -1,5 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { fmtDateShort, fmtMoneyCents, fmtPct, fmtRelativeTime, fmtUSD, initials } from "./format";
+import {
+  fmtDateShort,
+  fmtMoneyCents,
+  fmtMonth,
+  fmtPct,
+  fmtRelativeTime,
+  fmtUSD,
+  initials,
+} from "./format";
+
+describe("fmtMonth", () => {
+  it("renders a period_month date as 'Month YYYY'", () => {
+    expect(fmtMonth("2026-05-01")).toBe("May 2026");
+    expect(fmtMonth("2025-12-01")).toBe("December 2025");
+  });
+
+  it("accepts a bare year-month input", () => {
+    expect(fmtMonth("2026-01")).toBe("January 2026");
+  });
+
+  it("returns an em dash for null, undefined, or junk", () => {
+    expect(fmtMonth(null)).toBe("—");
+    expect(fmtMonth(undefined)).toBe("—");
+    expect(fmtMonth("not-a-date")).toBe("—");
+    expect(fmtMonth("2026-13-01")).toBe("—");
+  });
+});
 
 describe("fmtUSD", () => {
   it("prefixes a dollar sign and inserts thousands separators", () => {

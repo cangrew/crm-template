@@ -678,6 +678,21 @@ export function useCreateStatement() {
   });
 }
 
+export function useUpdateStatement() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      patch,
+    }: {
+      id: string;
+      patch: Parameters<typeof statementsApi.updateStatement>[2];
+    }) => statementsApi.updateStatement(supabase, id, patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.statements.all }),
+  });
+}
+
 export function useDeleteStatement() {
   const supabase = createClient();
   const qc = useQueryClient();
@@ -692,6 +707,21 @@ export function useBulkInsertLines() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (lines: StatementLineInput[]) => statementsApi.bulkInsertLines(supabase, lines),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.statements.all }),
+  });
+}
+
+export function useUpdateLine() {
+  const supabase = createClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      lineId,
+      patch,
+    }: {
+      lineId: string;
+      patch: Parameters<typeof statementsApi.updateLine>[2];
+    }) => statementsApi.updateLine(supabase, lineId, patch),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.statements.all }),
   });
 }

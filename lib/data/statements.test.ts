@@ -7,6 +7,8 @@ import {
   listStatements,
   postStatement,
   setLineMatch,
+  updateLine,
+  updateStatement,
   voidStatement,
 } from "./statements";
 
@@ -73,6 +75,33 @@ describe("statements api", () => {
       matched_policy_id: "pol-1",
       match_reason: "manual",
     });
+  });
+
+  it("updateStatement patches the statement and returns the row", async () => {
+    const row = { id: "st-1", storage_path: "st-1/file.csv" };
+    const { client, from, builder } = stubClient({ data: row, error: null });
+    await expect(
+      updateStatement(client, "st-1", { storage_path: "st-1/file.csv" }),
+    ).resolves.toEqual(row);
+    expect(from).toHaveBeenCalledWith("commission_statements");
+    expect(builder.update).toHaveBeenCalledWith({ storage_path: "st-1/file.csv" });
+    expect(builder.eq).toHaveBeenCalledWith("id", "st-1");
+  });
+
+  it("updateStatement throws when Supabase returns an error", async () => {
+    const { client } = stubClient({ data: null, error: new Error("forbidden") });
+    await expect(updateStatement(client, "st-1", { storage_path: "x" })).rejects.toThrow(
+      "forbidden",
+    );
+  });
+
+  it("updateLine patches editable line columns (including line_kind)", async () => {
+    const row = { id: "ln-1", line_kind: "override" };
+    const { client, from, builder } = stubClient({ data: row, error: null });
+    await expect(updateLine(client, "ln-1", { line_kind: "override" })).resolves.toEqual(row);
+    expect(from).toHaveBeenCalledWith("statement_lines");
+    expect(builder.update).toHaveBeenCalledWith({ line_kind: "override" });
+    expect(builder.eq).toHaveBeenCalledWith("id", "ln-1");
   });
 
   it("postStatement calls the RPC with the wire entries", async () => {
