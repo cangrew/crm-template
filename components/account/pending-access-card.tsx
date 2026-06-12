@@ -27,8 +27,8 @@ export function PendingAccessCard({ deactivated }: { deactivated: boolean }) {
   return (
     <div className="bg-bg grid min-h-screen place-items-center p-10">
       <div className="animate-fade-up border-border bg-bg w-full max-w-[480px] rounded-[20px] border px-11 py-10 text-center shadow-[var(--shadow-card)]">
-        <span className="mb-[22px] inline-flex items-center gap-2 rounded-full border border-[rgba(255,82,0,.28)] bg-[rgba(255,82,0,.12)] px-[13px] py-1.5 text-[12.5px] font-semibold text-[#c2410c]">
-          <span className="h-[7px] w-[7px] rounded-full bg-[#ff5200]" />
+        <span className="text-brand-700 mb-[22px] inline-flex items-center gap-2 rounded-full border border-[rgba(46,82,144,.28)] bg-[rgba(46,82,144,.12)] px-[13px] py-1.5 text-[12.5px] font-semibold">
+          <span className="bg-brand-500 h-[7px] w-[7px] rounded-full" />
           {deactivated ? "Access disabled" : "Account pending"}
         </span>
 

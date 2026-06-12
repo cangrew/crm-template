@@ -1,7 +1,7 @@
 import type { AppRole } from "@/lib/domain/enums";
 
 export const DEV_PASSWORD = "dev-password";
-export const DEV_ROLE_STORAGE_KEY = "crm-template-dev-role";
+export const DEV_ROLE_STORAGE_KEY = "findway-dev-role";
 
 export const DEV_USERS: Record<AppRole, { email: string; label: string }> = {
   admin: { email: "admin@example.com", label: "Avery Admin" },
