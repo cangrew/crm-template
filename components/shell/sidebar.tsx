@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import type { AppRole } from "@/lib/domain/enums";
 import { canAccessPath } from "@/lib/auth/route-access";
-import { APP_NAME } from "@/lib/config/app";
+import { APP_LOGO_PATH, APP_NAME } from "@/lib/config/app";
 import { NAV_GROUPS } from "@/lib/config/nav";
 
 export function Sidebar({ role }: { role: AppRole }) {
@@ -13,9 +14,7 @@ export function Sidebar({ role }: { role: AppRole }) {
   return (
     <aside className="side">
       <div className="side-logo">
-        <span className="font-display text-[19px] font-bold tracking-tight text-white">
-          {APP_NAME}
-        </span>
+        <Image src={APP_LOGO_PATH} alt={APP_NAME} width={1328} height={400} priority />
       </div>
       <nav className="side-nav" aria-label="Primary">
         {NAV_GROUPS.map((grp) => {

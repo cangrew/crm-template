@@ -194,7 +194,8 @@ h4 {
   height: 34px;
   display: block;
   width: 180px;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: left center;
 }
 
 .side-nav {
