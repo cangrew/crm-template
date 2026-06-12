@@ -20,7 +20,7 @@ vi.mock("@/lib/data/hooks", () => ({
 }));
 
 vi.mock("@/lib/auth/roles", () => ({
-  can: (role: string, action: string, resource: string) => {
+  can: (role: string, action: string) => {
     // Admin can do everything; member can only read
     if (role === "admin") return true;
     if (role === "member" && action === "read") return true;
@@ -32,7 +32,13 @@ vi.mock("@/lib/auth/roles", () => ({
 
 // Stub heavy UI sub-components so we focus on the page logic
 vi.mock("@/components/contacts/contacts-filter-bar", () => ({
-  ContactsFilterBar: ({ onQ, onStatus }: { onQ: (v: string) => void; onStatus: (v: string) => void }) => (
+  ContactsFilterBar: ({
+    onQ,
+    onStatus,
+  }: {
+    onQ: (v: string) => void;
+    onStatus: (v: string) => void;
+  }) => (
     <div>
       <input aria-label="search" onChange={(e) => onQ(e.target.value)} />
       <select aria-label="status" onChange={(e) => onStatus(e.target.value)}>
@@ -99,14 +105,7 @@ vi.mock("@/components/ui/btn", () => ({
 }));
 
 vi.mock("@/components/ui/states", () => ({
-  EmptyState: ({
-    title,
-    body,
-  }: {
-    icon?: unknown;
-    title: string;
-    body: string;
-  }) => (
+  EmptyState: ({ title, body }: { icon?: unknown; title: string; body: string }) => (
     <div>
       <h3>{title}</h3>
       <p>{body}</p>
@@ -122,14 +121,16 @@ vi.mock("@/components/ui/table", () => ({
 import React from "react";
 import ContactsPage from "./page";
 
-function makeContact(overrides: Partial<{
-  id: string;
-  name: string;
-  company: string | null;
-  email: string | null;
-  status: "lead" | "active" | "at_risk" | "closed";
-  created_at: string;
-}> = {}) {
+function makeContact(
+  overrides: Partial<{
+    id: string;
+    name: string;
+    company: string | null;
+    email: string | null;
+    status: "lead" | "active" | "at_risk" | "closed";
+    created_at: string;
+  }> = {},
+) {
   return {
     id: "c1",
     name: "Alice",
@@ -234,7 +235,7 @@ describe("ContactsPage", () => {
   it("filters contacts by name search", async () => {
     contactsData = [
       makeContact({ id: "1", name: "Alice Smith" }),
-      makeContact({ id: "2", name: "Bob Jones" }),
+      makeContact({ id: "2", name: "Bob Jones", company: "Other Ltd", email: "bob@other.com" }),
     ];
     render(<ContactsPage />);
 
@@ -248,7 +249,7 @@ describe("ContactsPage", () => {
   it("filters contacts by company name", async () => {
     contactsData = [
       makeContact({ id: "1", name: "Alice", company: "Acme Corp" }),
-      makeContact({ id: "2", name: "Bob", company: "Other Ltd" }),
+      makeContact({ id: "2", name: "Bob", company: "Other Ltd", email: "bob@other.com" }),
     ];
     render(<ContactsPage />);
 

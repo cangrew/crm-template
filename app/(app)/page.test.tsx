@@ -7,11 +7,13 @@ const mockRefetch = vi.fn();
 let contactsData: unknown[] | undefined = undefined;
 let contactsIsLoading = false;
 let contactsIsError = false;
-let profileData: {
-  full_name: string | null;
-  email: string | null;
-  role: string | null;
-} | undefined = undefined;
+let profileData:
+  | {
+      full_name: string | null;
+      email: string | null;
+      role: string | null;
+    }
+  | undefined = undefined;
 
 vi.mock("@/lib/data/hooks", () => ({
   useContacts: () => ({
@@ -94,9 +96,7 @@ vi.mock("@/components/common/entity-table", () => ({
       {rows.length === 0 && emptyText ? (
         <p>{emptyText}</p>
       ) : (
-        (rows as Array<{ id: string; name: string }>).map((r) => (
-          <div key={r.id}>{r.name}</div>
-        ))
+        (rows as Array<{ id: string; name: string }>).map((r) => <div key={r.id}>{r.name}</div>)
       )}
     </div>
   ),
@@ -108,13 +108,15 @@ vi.mock("@/components/ui/badges", () => ({
 
 import DashboardPage from "./page";
 
-function makeContact(overrides: Partial<{
-  id: string;
-  name: string;
-  company: string | null;
-  status: "lead" | "active" | "at_risk" | "closed";
-  created_at: string;
-}> = {}) {
+function makeContact(
+  overrides: Partial<{
+    id: string;
+    name: string;
+    company: string | null;
+    status: "lead" | "active" | "at_risk" | "closed";
+    created_at: string;
+  }> = {},
+) {
   return {
     id: "c1",
     name: "Alice",
@@ -167,11 +169,7 @@ describe("DashboardPage", () => {
   });
 
   it("shows total contacts count", () => {
-    contactsData = [
-      makeContact({ id: "1" }),
-      makeContact({ id: "2" }),
-      makeContact({ id: "3" }),
-    ];
+    contactsData = [makeContact({ id: "1" }), makeContact({ id: "2" }), makeContact({ id: "3" })];
     render(<DashboardPage />);
     const totalStat = screen.getByTestId("stat-total-contacts");
     expect(totalStat).toHaveTextContent("3");

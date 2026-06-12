@@ -35,13 +35,7 @@ vi.mock("@/lib/domain/enums", () => ({
 }));
 
 vi.mock("@/components/settings/users/users-filter-bar", () => ({
-  UsersFilterBar: ({
-    onQ,
-    onRole,
-  }: {
-    onQ: (v: string) => void;
-    onRole: (v: string) => void;
-  }) => (
+  UsersFilterBar: ({ onQ, onRole }: { onQ: (v: string) => void; onRole: (v: string) => void }) => (
     <div>
       <input aria-label="search" onChange={(e) => onQ(e.target.value)} />
       <select aria-label="role" onChange={(e) => onRole(e.target.value)}>
@@ -131,14 +125,16 @@ vi.mock("@/components/ui/table", () => ({
 
 import UserManagementPage from "./page";
 
-function makeProfile(overrides: Partial<{
-  id: string;
-  email: string;
-  full_name: string | null;
-  role: string | null;
-  is_active: boolean;
-  created_at: string;
-}> = {}) {
+function makeProfile(
+  overrides: Partial<{
+    id: string;
+    email: string;
+    full_name: string | null;
+    role: string | null;
+    is_active: boolean;
+    created_at: string;
+  }> = {},
+) {
   return {
     id: "u1",
     email: "alice@example.com",
@@ -335,9 +331,6 @@ describe("UserManagementPage", () => {
     profilesData = [];
     render(<UserManagementPage />);
     await userEvent.click(screen.getByRole("button", { name: "Invite User" }));
-    expect(mockToast).toHaveBeenCalledWith(
-      "Invitations go through Microsoft Entra ID.",
-      "default",
-    );
+    expect(mockToast).toHaveBeenCalledWith("Invitations go through Microsoft Entra ID.", "default");
   });
 });

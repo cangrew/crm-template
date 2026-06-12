@@ -129,13 +129,15 @@ vi.mock("@/components/ui/states", () => ({
 
 import DocumentsPage from "./page";
 
-function makeDoc(overrides: Partial<{
-  id: string;
-  kind: string;
-  storage_path: string;
-  contact_id: string | null;
-  created_at: string;
-}> = {}) {
+function makeDoc(
+  overrides: Partial<{
+    id: string;
+    kind: string;
+    storage_path: string;
+    contact_id: string | null;
+    created_at: string;
+  }> = {},
+) {
   return {
     id: "doc-1",
     kind: "contract",
@@ -219,10 +221,7 @@ describe("DocumentsPage", () => {
   });
 
   it("renders document cards when documents are loaded", () => {
-    docsData = [
-      makeDoc({ id: "d1", kind: "contract" }),
-      makeDoc({ id: "d2", kind: "invoice" }),
-    ];
+    docsData = [makeDoc({ id: "d1", kind: "contract" }), makeDoc({ id: "d2", kind: "invoice" })];
     render(<DocumentsPage />);
     expect(screen.getByTestId("doc-card-d1")).toBeInTheDocument();
     expect(screen.getByTestId("doc-card-d2")).toBeInTheDocument();
@@ -267,10 +266,7 @@ describe("DocumentsPage", () => {
   });
 
   it("filters documents by kind dropdown", async () => {
-    docsData = [
-      makeDoc({ id: "d1", kind: "contract" }),
-      makeDoc({ id: "d2", kind: "invoice" }),
-    ];
+    docsData = [makeDoc({ id: "d1", kind: "contract" }), makeDoc({ id: "d2", kind: "invoice" })];
     render(<DocumentsPage />);
 
     await userEvent.selectOptions(screen.getByLabelText("kind"), "contract");
@@ -283,7 +279,7 @@ describe("DocumentsPage", () => {
     docsData = [makeDoc({ kind: "contract" })];
     render(<DocumentsPage />);
 
-    await userEvent.selectOptions(screen.getByLabelText("kind"), "invoice");
+    await userEvent.type(screen.getByLabelText("search"), "no-such-document");
 
     await waitFor(() => {
       expect(

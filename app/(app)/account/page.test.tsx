@@ -4,12 +4,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
-let profileData: {
-  id: string;
-  full_name: string | null;
-  email: string;
-  role: string | null;
-} | undefined = undefined;
+let profileData:
+  | {
+      id: string;
+      full_name: string | null;
+      email: string;
+      role: string | null;
+    }
+  | undefined = undefined;
 let searchParamTab = "";
 
 vi.mock("@/lib/data/hooks", () => ({
@@ -101,9 +103,7 @@ describe("AccountPage", () => {
 
   it("renders the page subtitle", () => {
     render(<AccountPage />);
-    expect(
-      screen.getByText("Manage your profile, sign-in, and notifications"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Manage your profile, sign-in, and notifications")).toBeInTheDocument();
   });
 
   it("renders the AccountSummaryCard", () => {
@@ -162,17 +162,13 @@ describe("AccountPage", () => {
     };
     render(<AccountPage />);
     // Should fall back to STUB_PROFILE email
-    expect(screen.getByTestId("account-summary-card")).toHaveTextContent(
-      "design-qa@example.com",
-    );
+    expect(screen.getByTestId("account-summary-card")).toHaveTextContent("design-qa@example.com");
   });
 
   it("falls back to stub profile when profile data is undefined", () => {
     profileData = undefined;
     render(<AccountPage />);
-    expect(screen.getByTestId("account-summary-card")).toHaveTextContent(
-      "design-qa@example.com",
-    );
+    expect(screen.getByTestId("account-summary-card")).toHaveTextContent("design-qa@example.com");
   });
 
   it("passes the real profile id and role to PreferencesTab", async () => {

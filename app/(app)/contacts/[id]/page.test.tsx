@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
@@ -77,6 +77,7 @@ vi.mock("@/components/common/page-header", () => ({
   PageHeader: ({
     title,
     backLabel,
+    backHref,
     actions,
     badges,
   }: {
@@ -88,7 +89,7 @@ vi.mock("@/components/common/page-header", () => ({
     actions?: React.ReactNode;
   }) => (
     <div>
-      {backLabel && <a href="/contacts">{backLabel}</a>}
+      {backLabel && <a href={backHref}>{backLabel}</a>}
       <h1>{title}</h1>
       {badges && <div data-testid="badges">{badges}</div>}
       {actions && <div data-testid="actions">{actions}</div>}
@@ -185,12 +186,14 @@ vi.mock("@/lib/domain/schemas", () => ({
 
 import ContactDetailPage from "./page";
 
-function makeContact(overrides: Partial<{
-  id: string;
-  name: string;
-  company: string | null;
-  status: string;
-}> = {}) {
+function makeContact(
+  overrides: Partial<{
+    id: string;
+    name: string;
+    company: string | null;
+    status: string;
+  }> = {},
+) {
   return {
     id: "contact-abc-123",
     name: "Alice Smith",
