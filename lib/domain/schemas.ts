@@ -21,7 +21,7 @@ export const profileInsertSchema = z.object({
   id: uuid,
   full_name: nonEmpty,
   email: z.email(),
-  role: z.enum(APP_ROLES).default("member"),
+  role: z.enum(APP_ROLES).default("agent"),
   is_active: z.boolean().default(true),
 });
 

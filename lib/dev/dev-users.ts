@@ -1,4 +1,4 @@
-import type { AppRole } from "@/lib/domain/enums";
+import { APP_ROLES, type AppRole } from "@/lib/domain/enums";
 
 export const DEV_PASSWORD = "dev-password";
 export const DEV_ROLE_STORAGE_KEY = "findway-dev-role";
@@ -6,13 +6,14 @@ export const DEV_ROLE_STORAGE_KEY = "findway-dev-role";
 export const DEV_USERS: Record<AppRole, { email: string; label: string }> = {
   admin: { email: "admin@example.com", label: "Avery Admin" },
   manager: { email: "manager@example.com", label: "Morgan Manager" },
-  member: { email: "member@example.com", label: "Casey Member" },
+  agent: { email: "agent@example.com", label: "Casey Agent" },
+  agency_owner: { email: "owner@example.com", label: "Quinn Owner" },
 };
 
 export const DEV_FALLBACK_ROLE: AppRole = "admin";
 
 export function isDevRole(value: unknown): value is AppRole {
-  return value === "admin" || value === "manager" || value === "member";
+  return APP_ROLES.includes(value as AppRole);
 }
 
 export function readStoredDevRole(): AppRole {

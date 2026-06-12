@@ -4,13 +4,14 @@
  * labels live in the *_LABELS maps so display text never leaks into stored data.
  */
 
-export const APP_ROLES = ["admin", "manager", "member"] as const;
+export const APP_ROLES = ["admin", "manager", "agent", "agency_owner"] as const;
 export type AppRole = (typeof APP_ROLES)[number];
 
 export const APP_ROLE_LABELS: Record<AppRole, string> = {
   admin: "Admin",
   manager: "Manager",
-  member: "Member",
+  agent: "Agent",
+  agency_owner: "Agency Owner",
 };
 
 /* ------------------------------------------------------------------------- *

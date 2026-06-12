@@ -21,10 +21,10 @@ vi.mock("@/lib/data/hooks", () => ({
 
 vi.mock("@/lib/auth/roles", () => ({
   can: (role: string, action: string) => {
-    // Admin can do everything; member can only read
+    // Admin can do everything; agent can only read
     if (role === "admin") return true;
-    if (role === "member" && action === "read") return true;
-    if (role === "member") return false;
+    if (role === "agent" && action === "read") return true;
+    if (role === "agent") return false;
     if (role === "manager" && (action === "create" || action === "update")) return true;
     return false;
   },
@@ -199,9 +199,9 @@ describe("ContactsPage", () => {
     expect(screen.getByRole("button", { name: "New Contact" })).toBeInTheDocument();
   });
 
-  it("hides New Contact button for member (cannot create)", () => {
+  it("hides New Contact button for agent (cannot create)", () => {
     contactsData = [];
-    profileData = { role: "member" };
+    profileData = { role: "agent" };
     render(<ContactsPage />);
     expect(screen.queryByRole("button", { name: "New Contact" })).not.toBeInTheDocument();
   });

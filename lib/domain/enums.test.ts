@@ -3,7 +3,7 @@ import { APP_ROLES, APP_ROLE_LABELS, CONTACT_STATUSES, CONTACT_STATUS_LABELS } f
 
 describe("enum value sets", () => {
   it("defines the app roles", () => {
-    expect([...APP_ROLES]).toEqual(["admin", "manager", "member"]);
+    expect([...APP_ROLES]).toEqual(["admin", "manager", "agent", "agency_owner"]);
   });
 
   it("defines contact statuses", () => {

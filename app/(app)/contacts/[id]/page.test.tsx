@@ -68,7 +68,7 @@ vi.mock("@/lib/auth/roles", () => ({
   can: (role: string, action: string) => {
     if (role === "admin") return true;
     if (role === "manager" && action !== "delete") return true;
-    if (role === "member") return false;
+    if (role === "agent") return false;
     return false;
   },
 }));
@@ -267,9 +267,9 @@ describe("ContactDetailPage", () => {
     expect(screen.getByTestId("status-picker")).toBeInTheDocument();
   });
 
-  it("shows a static badge for member (cannot update)", () => {
+  it("shows a static badge for agent (cannot update)", () => {
     contactData = makeContact({ status: "active" });
-    profileData = { role: "member" };
+    profileData = { role: "agent" };
     render(<ContactDetailPage />);
     expect(screen.getByTestId("contact-badge")).toBeInTheDocument();
     expect(screen.queryByTestId("status-picker")).not.toBeInTheDocument();
@@ -291,9 +291,9 @@ describe("ContactDetailPage", () => {
     expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
   });
 
-  it("hides Edit and Delete for member", () => {
+  it("hides Edit and Delete for agent", () => {
     contactData = makeContact();
-    profileData = { role: "member" };
+    profileData = { role: "agent" };
     render(<ContactDetailPage />);
     expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();

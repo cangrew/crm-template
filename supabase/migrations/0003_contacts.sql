@@ -53,13 +53,13 @@ execute function public.set_contact_updated_at();
 -- the floor, the app guard is just UX.
 --   admin   — full CRUD
 --   manager — create/read/update, no delete (the worked mid-tier example)
---   member  — read-only
+--   agent / agency_owner — read-only tenants (RLS narrows rows from Phase 2 on)
 -- ---------------------------------------------------------------------------
 alter table public.contacts enable row level security;
 
 create policy contacts_select on public.contacts
 for select to authenticated
-using (public.has_role('admin', 'manager', 'member'));
+using (public.has_role('admin', 'manager', 'agent', 'agency_owner'));
 
 create policy contacts_insert on public.contacts
 for insert to authenticated
@@ -85,7 +85,7 @@ as $$
 begin
   if tg_op = 'INSERT' then
     perform public.notify_roles(
-      array['admin', 'manager', 'member']::public.app_role[],
+      array['admin', 'manager', 'agent', 'agency_owner']::public.app_role[],
       'contact_created', 'normal',
       'New contact: ' || new.name,
       coalesce(nullif(new.company, ''), 'No company') || ' — added as ' || new.status::text || '.',

@@ -1,4 +1,4 @@
--- RLS / policy assertions per role (admin, manager, member) plus the
+-- RLS / policy assertions per role (admin, manager, agent) plus the
 -- deactivated-admin revocation case.
 -- Run with: pnpm db:test  (wraps `supabase test db`, which uses pgTAP).
 -- Everything runs inside a single transaction that is rolled back at the end.
@@ -31,12 +31,12 @@ insert into auth.users (id, email, raw_user_meta_data)
 values
   ('66666666-6666-4666-8666-666666666661', 'rls-admin@test', '{"full_name":"RLS Admin"}'),
   ('66666666-6666-4666-8666-666666666662', 'rls-manager@test', '{"full_name":"RLS Manager"}'),
-  ('66666666-6666-4666-8666-666666666663', 'rls-member@test', '{"full_name":"RLS Member"}'),
+  ('66666666-6666-4666-8666-666666666663', 'rls-agent@test', '{"full_name":"RLS Agent"}'),
   ('66666666-6666-4666-8666-666666666664', 'rls-disabled@test', '{"full_name":"RLS Disabled"}');
 
 update public.profiles set role = 'admin' where id = '66666666-6666-4666-8666-666666666661';
 update public.profiles set role = 'manager' where id = '66666666-6666-4666-8666-666666666662';
-update public.profiles set role = 'member' where id = '66666666-6666-4666-8666-666666666663';
+update public.profiles set role = 'agent' where id = '66666666-6666-4666-8666-666666666663';
 update public.profiles set role = 'admin', is_active = false
 where id = '66666666-6666-4666-8666-666666666664';
 
@@ -51,7 +51,7 @@ values
    'other', 'general/other-2-note.pdf');
 
 -- ===========================================================================
--- Member: read-only everywhere
+-- Agent: read-only everywhere
 -- ===========================================================================
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"66666666-6666-4666-8666-666666666663"}';
@@ -60,23 +60,23 @@ select is(
   (select count(*) from public.contacts
    where id = '55555555-5555-4555-8555-555555555551'),
   1::bigint,
-  'member can read contacts'
+  'agent can read contacts'
 );
 
 select throws_ok(
-  $$insert into public.contacts (name) values ('Member Contact')$$,
+  $$insert into public.contacts (name) values ('Agent Contact')$$,
   '42501',
   null,
-  'member cannot insert a contact'
+  'agent cannot insert a contact'
 );
 
 select is(
   pg_temp.affected(
-    $$update public.contacts set notes = 'member was here'
+    $$update public.contacts set notes = 'agent was here'
       where id = '55555555-5555-4555-8555-555555555551'$$
   ),
   0::bigint,
-  'member update of a contact silently affects 0 rows'
+  'agent update of a contact silently affects 0 rows'
 );
 
 select throws_ok(
@@ -84,7 +84,7 @@ select throws_ok(
     values ('other', 'general/other-x.pdf')$$,
   '42501',
   null,
-  'member cannot insert a document'
+  'agent cannot insert a document'
 );
 
 select is(
@@ -93,13 +93,13 @@ select is(
       where id = '44444444-4444-4444-8444-444444444441'$$
   ),
   0::bigint,
-  'member delete of a document affects 0 rows'
+  'agent delete of a document affects 0 rows'
 );
 
 select is(
   (select count(*) from public.profiles),
   1::bigint,
-  'member sees only their own profile'
+  'agent sees only their own profile'
 );
 
 -- ===========================================================================
@@ -173,7 +173,7 @@ select is(
 
 select is(
   pg_temp.affected(
-    $$update public.profiles set full_name = 'Renamed Member'
+    $$update public.profiles set full_name = 'Renamed Agent'
       where id = '66666666-6666-4666-8666-666666666663'$$
   ),
   1::bigint,

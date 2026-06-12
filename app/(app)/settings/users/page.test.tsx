@@ -30,7 +30,7 @@ vi.mock("@/lib/domain/enums", () => ({
   APP_ROLE_LABELS: {
     admin: "Admin",
     manager: "Manager",
-    member: "Member",
+    agent: "Agent",
   },
 }));
 
@@ -42,7 +42,7 @@ vi.mock("@/components/settings/users/users-filter-bar", () => ({
         <option value="">All</option>
         <option value="admin">Admin</option>
         <option value="manager">Manager</option>
-        <option value="member">Member</option>
+        <option value="agent">Agent</option>
       </select>
     </div>
   ),
@@ -139,7 +139,7 @@ function makeProfile(
     id: "u1",
     email: "alice@example.com",
     full_name: "Alice",
-    role: "member",
+    role: "agent",
     is_active: true,
     created_at: "2026-01-01T00:00:00Z",
     ...overrides,
@@ -232,7 +232,7 @@ describe("UserManagementPage", () => {
   it("filters profiles by role dropdown", async () => {
     profilesData = [
       makeProfile({ id: "u1", role: "admin" }),
-      makeProfile({ id: "u2", role: "member" }),
+      makeProfile({ id: "u2", role: "agent" }),
     ];
     render(<UserManagementPage />);
 
@@ -243,7 +243,7 @@ describe("UserManagementPage", () => {
   });
 
   it("shows 'No users match these filters' when filters exclude all results", async () => {
-    profilesData = [makeProfile({ role: "member" })];
+    profilesData = [makeProfile({ role: "agent" })];
     render(<UserManagementPage />);
 
     await userEvent.selectOptions(screen.getByLabelText("role"), "admin");
@@ -256,7 +256,7 @@ describe("UserManagementPage", () => {
   });
 
   it("calls updateProfile.mutate with new role when changeRole is invoked", () => {
-    profilesData = [makeProfile({ id: "u1", role: "member" })];
+    profilesData = [makeProfile({ id: "u1", role: "agent" })];
     render(<UserManagementPage />);
 
     screen.getByRole("button", { name: "Change Role" }).click();
@@ -268,7 +268,7 @@ describe("UserManagementPage", () => {
   });
 
   it("toasts success message after role change", () => {
-    profilesData = [makeProfile({ id: "u1", role: "member" })];
+    profilesData = [makeProfile({ id: "u1", role: "agent" })];
     mockUpdateMutate.mockImplementation(
       (_args: unknown, { onSuccess }: { onSuccess: () => void }) => {
         onSuccess();

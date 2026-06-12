@@ -32,7 +32,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
  * triggered the change is excluded at insert time by the SQL helper.
  */
 const NOTIFICATION_AUDIENCE: Record<NotificationType, readonly AppRole[]> = {
-  contact_created: ["admin", "manager", "member"],
+  contact_created: ["admin", "manager", "agent", "agency_owner"],
   contact_at_risk: ["admin", "manager"],
   contact_closed: ["admin"],
 };

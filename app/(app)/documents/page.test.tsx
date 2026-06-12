@@ -23,7 +23,7 @@ vi.mock("@/lib/data/hooks", () => ({
 vi.mock("@/lib/auth/roles", () => ({
   can: (role: string, action: string) => {
     if (role === "admin" || role === "manager") return true;
-    if (role === "member" && action === "read") return true;
+    if (role === "agent" && action === "read") return true;
     return false;
   },
 }));
@@ -192,9 +192,9 @@ describe("DocumentsPage", () => {
     expect(screen.getAllByRole("button", { name: "Upload document" }).length).toBeGreaterThan(0);
   });
 
-  it("hides upload button in empty state for member (cannot create)", () => {
+  it("hides upload button in empty state for agent (cannot create)", () => {
     docsData = [];
-    profileData = { role: "member" };
+    profileData = { role: "agent" };
     render(<DocumentsPage />);
     expect(screen.queryByRole("button", { name: "Upload document" })).not.toBeInTheDocument();
   });
@@ -206,9 +206,9 @@ describe("DocumentsPage", () => {
     expect(screen.getByRole("button", { name: "Upload" })).toBeInTheDocument();
   });
 
-  it("hides Upload button in header for member", () => {
+  it("hides Upload button in header for agent", () => {
     docsData = [];
-    profileData = { role: "member" };
+    profileData = { role: "agent" };
     render(<DocumentsPage />);
     expect(screen.queryByRole("button", { name: "Upload" })).not.toBeInTheDocument();
   });

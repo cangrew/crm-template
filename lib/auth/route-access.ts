@@ -1,5 +1,5 @@
 import type { AppRole } from "@/lib/domain/enums";
-import { isAdmin } from "./roles";
+import { isAdmin, isStaff } from "./roles";
 
 const LOGIN_PATH = "/login";
 
@@ -17,16 +17,24 @@ function isRouteOrChild(pathname: string, base: string): boolean {
   return pathname === base || pathname.startsWith(`${base}/`);
 }
 
+/** Areas only Findway staff (admin/manager) may view. */
+const STAFF_ONLY_PATHS = ["/agents", "/agencies"] as const;
+
 /**
  * Whether a role may view a given route. Mirrors the RBAC matrix: /settings
- * (user management) is admin-only; the remaining workspace pages are readable
- * by every role — write affordances inside them are gated per-action with
- * can(). A null role (session without a provisioned profile) is treated as
- * having no special access. Add a branch here for every new restricted area.
+ * (user management) is admin-only; agency management areas are staff-only;
+ * the remaining workspace pages are readable by every role — write
+ * affordances inside them are gated per-action with can(), and RLS narrows
+ * tenant roles (agent / agency_owner) to their own book of business. A null
+ * role (session without a provisioned profile) is treated as having no
+ * special access. Add a branch here for every new restricted area.
  */
 export function canAccessPath(pathname: string, role: AppRole | null): boolean {
   if (isRouteOrChild(pathname, "/settings")) {
     return role !== null && isAdmin(role);
+  }
+  if (STAFF_ONLY_PATHS.some((base) => isRouteOrChild(pathname, base))) {
+    return role !== null && isStaff(role);
   }
   return true;
 }

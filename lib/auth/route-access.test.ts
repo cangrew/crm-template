@@ -14,18 +14,31 @@ describe("canAccessPath", () => {
   it("restricts /settings to admins", () => {
     expect(canAccessPath("/settings/users", "admin")).toBe(true);
     expect(canAccessPath("/settings/users", "manager")).toBe(false);
-    expect(canAccessPath("/settings/users", "member")).toBe(false);
+    expect(canAccessPath("/settings/users", "agent")).toBe(false);
+    expect(canAccessPath("/settings/users", "agency_owner")).toBe(false);
   });
 
   it("covers descendant routes of /settings without prefix collisions", () => {
     expect(canAccessPath("/settings", "manager")).toBe(false);
-    expect(canAccessPath("/settings/users/123", "member")).toBe(false);
+    expect(canAccessPath("/settings/users/123", "agent")).toBe(false);
     // An unrelated sibling route is not captured by the /settings branch.
-    expect(canAccessPath("/settings-legacy", "member")).toBe(true);
+    expect(canAccessPath("/settings-legacy", "agent")).toBe(true);
+  });
+
+  it("restricts agency management areas to staff", () => {
+    for (const base of ["/agents", "/agencies"] as const) {
+      expect(canAccessPath(base, "admin")).toBe(true);
+      expect(canAccessPath(base, "manager")).toBe(true);
+      expect(canAccessPath(base, "agent")).toBe(false);
+      expect(canAccessPath(base, "agency_owner")).toBe(false);
+      expect(canAccessPath(`${base}/some-id`, "agent")).toBe(false);
+      expect(canAccessPath(`${base}/some-id`, "manager")).toBe(true);
+    }
+    expect(canAccessPath("/agents", null)).toBe(false);
   });
 
   it("allows shared workspace pages to every role", () => {
-    for (const role of ["admin", "manager", "member"] as const) {
+    for (const role of ["admin", "manager", "agent", "agency_owner"] as const) {
       expect(canAccessPath("/", role)).toBe(true);
       expect(canAccessPath("/contacts", role)).toBe(true);
       expect(canAccessPath("/documents", role)).toBe(true);
@@ -69,7 +82,10 @@ describe("resolveAuthRedirect", () => {
       }),
     ).toBe("/");
     expect(
-      resolveAuthRedirect({ pathname: "/settings/users", isAuthenticated: true, role: "member" }),
+      resolveAuthRedirect({ pathname: "/settings/users", isAuthenticated: true, role: "agent" }),
+    ).toBe("/");
+    expect(
+      resolveAuthRedirect({ pathname: "/agencies", isAuthenticated: true, role: "agency_owner" }),
     ).toBe("/");
   });
 
@@ -78,10 +94,13 @@ describe("resolveAuthRedirect", () => {
       resolveAuthRedirect({ pathname: "/settings/users", isAuthenticated: true, role: "admin" }),
     ).toBeNull();
     expect(
-      resolveAuthRedirect({ pathname: "/contacts", isAuthenticated: true, role: "member" }),
+      resolveAuthRedirect({ pathname: "/contacts", isAuthenticated: true, role: "agent" }),
     ).toBeNull();
     expect(
       resolveAuthRedirect({ pathname: "/documents", isAuthenticated: true, role: "manager" }),
+    ).toBeNull();
+    expect(
+      resolveAuthRedirect({ pathname: "/agents", isAuthenticated: true, role: "manager" }),
     ).toBeNull();
   });
 

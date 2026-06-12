@@ -9,7 +9,7 @@ const supabase = {} as TypedSupabaseClient;
 
 function profile(
   overrides: Partial<{
-    role: "admin" | "manager" | "member" | null;
+    role: "admin" | "manager" | "agent" | "agency_owner" | null;
     is_active: boolean;
   }> = {},
 ) {
@@ -33,20 +33,21 @@ describe("isAuthorizedProfile()", () => {
   });
 
   it("denies an active profile whose role is not in the allow-list", () => {
-    expect(isAuthorizedProfile(profile({ role: "member" }), ADMIN_MANAGER)).toBe(false);
+    expect(isAuthorizedProfile(profile({ role: "agent" }), ADMIN_MANAGER)).toBe(false);
     expect(isAuthorizedProfile(profile({ role: "manager" }), ["admin"])).toBe(false);
   });
 
   it("allows an active profile whose role is in the allow-list", () => {
     expect(isAuthorizedProfile(profile(), ADMIN_MANAGER)).toBe(true);
     expect(isAuthorizedProfile(profile({ role: "manager" }), ADMIN_MANAGER)).toBe(true);
-    expect(isAuthorizedProfile(profile({ role: "member" }), ALL_ROLES)).toBe(true);
+    expect(isAuthorizedProfile(profile({ role: "agent" }), ALL_ROLES)).toBe(true);
+    expect(isAuthorizedProfile(profile({ role: "agency_owner" }), ALL_ROLES)).toBe(true);
   });
 });
 
 describe("role allow-list constants", () => {
   it("cover the expected roles", () => {
-    expect(ALL_ROLES).toEqual(["admin", "manager", "member"]);
+    expect(ALL_ROLES).toEqual(["admin", "manager", "agent", "agency_owner"]);
     expect(ADMIN_MANAGER).toEqual(["admin", "manager"]);
   });
 });
@@ -61,7 +62,7 @@ describe("requireApiRole()", () => {
     getCurrentProfile.mockResolvedValueOnce({ role: "admin", is_active: false });
     await expect(requireApiRole(supabase, ALL_ROLES)).resolves.toEqual({ ok: false, status: 403 });
 
-    getCurrentProfile.mockResolvedValueOnce({ role: "member", is_active: true });
+    getCurrentProfile.mockResolvedValueOnce({ role: "agent", is_active: true });
     await expect(requireApiRole(supabase, ADMIN_MANAGER)).resolves.toEqual({
       ok: false,
       status: 403,

@@ -8,7 +8,7 @@ const mockCreateSignedDownloadUrl = vi.hoisted(() => vi.fn());
 const mockCreateClient = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/auth/authorize", () => ({
-  ALL_ROLES: ["admin", "manager", "member"],
+  ALL_ROLES: ["admin", "manager", "agent", "agency_owner"],
   AUTH_ERROR: {
     401: { error: "Unauthorized" },
     403: { error: "Forbidden" },
@@ -64,7 +64,7 @@ describe("GET /api/documents/[id]/download", () => {
   });
 
   it("returns 404 when the document is not found", async () => {
-    mockRequireApiRole.mockResolvedValue({ ok: true, profile: { id: "u1", role: "member" } });
+    mockRequireApiRole.mockResolvedValue({ ok: true, profile: { id: "u1", role: "agent" } });
     mockGetDocument.mockRejectedValue(new Error("not found"));
 
     const res = await GET(makeRequest("missing"), { params: Promise.resolve({ id: "missing" }) });
@@ -85,13 +85,18 @@ describe("GET /api/documents/[id]/download", () => {
   });
 
   it("calls requireApiRole with ALL_ROLES so any active role is allowed to download", async () => {
-    mockRequireApiRole.mockResolvedValue({ ok: true, profile: { id: "u1", role: "member" } });
+    mockRequireApiRole.mockResolvedValue({ ok: true, profile: { id: "u1", role: "agent" } });
     mockGetDocument.mockResolvedValue({ id: "doc-4", storage_path: "general/file.pdf" });
     mockCreateSignedDownloadUrl.mockResolvedValue("https://example.com/url");
 
     await GET(makeRequest("doc-4"), { params: Promise.resolve({ id: "doc-4" }) });
 
-    expect(mockRequireApiRole).toHaveBeenCalledWith(stubSupabase, ["admin", "manager", "member"]);
+    expect(mockRequireApiRole).toHaveBeenCalledWith(stubSupabase, [
+      "admin",
+      "manager",
+      "agent",
+      "agency_owner",
+    ]);
   });
 
   it("passes the document storage_path to createSignedDownloadUrl", async () => {

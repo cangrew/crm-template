@@ -17,7 +17,7 @@ create extension if not exists pgcrypto;
 -- ---------------------------------------------------------------------------
 -- Enums
 -- ---------------------------------------------------------------------------
-create type public.app_role as enum ('admin', 'manager', 'member');
+create type public.app_role as enum ('admin', 'manager', 'agent', 'agency_owner');
 
 -- ---------------------------------------------------------------------------
 -- Tables

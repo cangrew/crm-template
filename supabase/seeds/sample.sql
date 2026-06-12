@@ -3,8 +3,9 @@
 -- Run via:  pnpm db:reset:sample
 --
 -- Coverage intent:
---   app_role:        Avery admin (seed.sql), Morgan manager, Casey member.
---   account states:  Riley pending (role null), Drew deactivated member.
+--   app_role:        Avery admin (seed.sql), Morgan manager, Casey agent,
+--                    Quinn agency owner.
+--   account states:  Riley pending (role null), Drew deactivated agent.
 --   contact_status:  every value has at least two representative rows.
 --   documents.kind:  contract, invoice, other (paths only; no objects are
 --                    uploaded, so downloads exercise the error-toast path).
@@ -17,9 +18,10 @@
 -- ---------------------------------------------------------------------------
 insert into auth.users (id, email, raw_user_meta_data) values
   ('00000000-0000-4000-8000-000000000002', 'manager@example.com', '{"full_name":"Morgan Manager"}'),
-  ('00000000-0000-4000-8000-000000000003', 'member@example.com',  '{"full_name":"Casey Member"}'),
+  ('00000000-0000-4000-8000-000000000003', 'agent@example.com',   '{"full_name":"Casey Agent"}'),
   ('00000000-0000-4000-8000-000000000004', 'pending@example.com', '{"full_name":"Riley Pending"}'),
-  ('00000000-0000-4000-8000-000000000005', 'former@example.com',  '{"full_name":"Drew Former"}')
+  ('00000000-0000-4000-8000-000000000005', 'former@example.com',  '{"full_name":"Drew Former"}'),
+  ('00000000-0000-4000-8000-000000000006', 'owner@example.com',   '{"full_name":"Quinn Owner"}')
 on conflict (id) do nothing;
 
 update auth.users set
@@ -34,7 +36,7 @@ update auth.users set
   recovery_token         = '',
   email_change_token_new = '',
   email_change           = ''
-where id between '00000000-0000-4000-8000-000000000002' and '00000000-0000-4000-8000-000000000005';
+where id between '00000000-0000-4000-8000-000000000002' and '00000000-0000-4000-8000-000000000006';
 
 insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
 select
@@ -45,15 +47,17 @@ select
   'email',
   now(), now(), now()
 from auth.users u
-where u.id between '00000000-0000-4000-8000-000000000002' and '00000000-0000-4000-8000-000000000005'
+where u.id between '00000000-0000-4000-8000-000000000002' and '00000000-0000-4000-8000-000000000006'
 on conflict do nothing;
 
 -- Role assignments (the on_auth_user_created trigger provisioned the profiles
 -- with a null role). Riley stays null to demo the /pending flow.
 update public.profiles set role = 'manager' where id = '00000000-0000-4000-8000-000000000002';
-update public.profiles set role = 'member'  where id = '00000000-0000-4000-8000-000000000003';
-update public.profiles set role = 'member', is_active = false
+update public.profiles set role = 'agent'   where id = '00000000-0000-4000-8000-000000000003';
+update public.profiles set role = 'agent', is_active = false
   where id = '00000000-0000-4000-8000-000000000005';
+update public.profiles set role = 'agency_owner'
+  where id = '00000000-0000-4000-8000-000000000006';
 
 -- ---------------------------------------------------------------------------
 -- Contacts (EXAMPLE ENTITY) — every status represented.

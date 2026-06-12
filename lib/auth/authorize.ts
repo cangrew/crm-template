@@ -11,8 +11,15 @@ import type { Profile, TypedSupabaseClient } from "@/lib/supabase/types";
  * database and the page guard in lib/auth/route-access.ts.
  */
 
-export const ALL_ROLES = ["admin", "manager", "member"] as const satisfies readonly AppRole[];
+export const ALL_ROLES = [
+  "admin",
+  "manager",
+  "agent",
+  "agency_owner",
+] as const satisfies readonly AppRole[];
 export const ADMIN_MANAGER = ["admin", "manager"] as const satisfies readonly AppRole[];
+/** Findway staff — the allow-list most write APIs use. */
+export const STAFF = ADMIN_MANAGER;
 
 /** The slice of a profile row that authorization decisions read. */
 export type AuthorizableProfile = Pick<Profile, "role" | "is_active">;

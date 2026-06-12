@@ -24,7 +24,7 @@ alter table public.documents enable row level security;
 
 create policy documents_select on public.documents
 for select to authenticated
-using (public.has_role('admin', 'manager', 'member'));
+using (public.has_role('admin', 'manager', 'agent', 'agency_owner'));
 
 create policy documents_insert on public.documents
 for insert to authenticated
@@ -52,7 +52,7 @@ on conflict (id) do nothing;
 
 create policy "documents bucket read" on storage.objects
 for select to authenticated
-using (bucket_id = 'documents' and public.has_role('admin', 'manager', 'member'));
+using (bucket_id = 'documents' and public.has_role('admin', 'manager', 'agent', 'agency_owner'));
 
 create policy "documents bucket insert" on storage.objects
 for insert to authenticated

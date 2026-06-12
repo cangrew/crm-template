@@ -26,11 +26,11 @@ $$;
 insert into auth.users (id, email, raw_user_meta_data)
 values
   ('99999999-9999-4999-8999-999999999991', 'doc-manager@test', '{"full_name":"Doc Manager"}'),
-  ('99999999-9999-4999-8999-999999999992', 'doc-member@test', '{"full_name":"Doc Member"}'),
+  ('99999999-9999-4999-8999-999999999992', 'doc-agent@test', '{"full_name":"Doc Agent"}'),
   ('99999999-9999-4999-8999-999999999993', 'doc-disabled@test', '{"full_name":"Doc Disabled"}');
 
 update public.profiles set role = 'manager' where id = '99999999-9999-4999-8999-999999999991';
-update public.profiles set role = 'member' where id = '99999999-9999-4999-8999-999999999992';
+update public.profiles set role = 'agent' where id = '99999999-9999-4999-8999-999999999992';
 update public.profiles set role = 'manager', is_active = false
 where id = '99999999-9999-4999-8999-999999999993';
 
@@ -45,7 +45,7 @@ select is(
 );
 
 -- ===========================================================================
--- Member: read-only
+-- Agent: read-only
 -- ===========================================================================
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"99999999-9999-4999-8999-999999999992"}';
@@ -54,7 +54,7 @@ select is(
   (select count(*) from public.documents
    where id = '88888888-8888-4888-8888-888888888881'),
   1::bigint,
-  'member can read documents'
+  'agent can read documents'
 );
 
 select throws_ok(
@@ -62,7 +62,7 @@ select throws_ok(
     values ('invoice', 'general/invoice-x.pdf')$$,
   '42501',
   null,
-  'member cannot insert a document'
+  'agent cannot insert a document'
 );
 
 select is(
@@ -71,7 +71,7 @@ select is(
       where id = '88888888-8888-4888-8888-888888888881'$$
   ),
   0::bigint,
-  'member delete of a document affects 0 rows'
+  'agent delete of a document affects 0 rows'
 );
 
 -- ===========================================================================

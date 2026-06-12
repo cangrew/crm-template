@@ -72,11 +72,13 @@ describe("typesForRole", () => {
     expect(typesForRole("admin").sort()).toEqual([...NOTIFICATION_TYPES].sort());
   });
 
-  it("excludes escalation events from the member list", () => {
-    const memberTypes: NotificationType[] = typesForRole("member");
-    expect(memberTypes).not.toContain("contact_at_risk");
-    expect(memberTypes).not.toContain("contact_closed");
-    expect(memberTypes).toContain("contact_created");
+  it("excludes escalation events from the tenant role lists", () => {
+    for (const role of ["agent", "agency_owner"] as const) {
+      const types: NotificationType[] = typesForRole(role);
+      expect(types).not.toContain("contact_at_risk");
+      expect(types).not.toContain("contact_closed");
+      expect(types).toContain("contact_created");
+    }
   });
 
   it("excludes admin-only closure events from the manager list", () => {

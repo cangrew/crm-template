@@ -12,7 +12,8 @@ import type { Profile } from "@/lib/supabase/types";
 const ROLE_TONE: Record<AppRole, Tone> = {
   admin: "t-orange",
   manager: "t-blue",
-  member: "t-teal",
+  agent: "t-teal",
+  agency_owner: "t-violet",
 };
 
 const ROLE_OPTIONS = (Object.keys(APP_ROLE_LABELS) as AppRole[]).map((r) => ({

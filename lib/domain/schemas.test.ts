@@ -65,13 +65,13 @@ describe("contactUpdateSchema", () => {
 });
 
 describe("profileInsertSchema", () => {
-  it("defaults new profiles to the member role", () => {
+  it("defaults new profiles to the agent role", () => {
     const result = profileInsertSchema.parse({
       id: "5c0e8c1e-95a1-4f44-9d0a-7d3a44d2b1aa",
       full_name: "Sam Admin",
       email: "sam@example.com",
     });
-    expect(result.role).toBe("member");
+    expect(result.role).toBe("agent");
     expect(result.is_active).toBe(true);
   });
 

@@ -29,7 +29,7 @@ vi.mock("@/lib/domain/enums", () => ({
   APP_ROLE_LABELS: {
     admin: "Admin",
     manager: "Manager",
-    member: "Member",
+    agent: "Agent",
   },
 }));
 

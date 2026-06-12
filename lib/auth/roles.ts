@@ -1,6 +1,6 @@
 import type { AppRole } from "@/lib/domain/enums";
 
-export type Resource = "contacts" | "documents" | "users";
+export type Resource = "contacts" | "documents" | "users" | "agents" | "agencies";
 
 export type Action = "create" | "read" | "update" | "delete";
 
@@ -8,26 +8,40 @@ const ALL: readonly Action[] = ["create", "read", "update", "delete"];
 
 /**
  * Coarse resource/action permission matrix. Admins manage everything including
- * users; managers run day-to-day records but cannot delete contacts or touch
- * user accounts (the worked example of a scoped mid-tier role); members are
- * read-only. Field-level nuances belong in dedicated helpers and are always
- * re-checked server-side / by RLS.
+ * users; managers run Findway's day-to-day records but cannot delete records
+ * or touch user accounts. Agents and agency owners are read-only tenants:
+ * RLS narrows WHICH rows they see (their own book of business) while this
+ * matrix gates the write affordances in the UI. Field-level nuances belong in
+ * dedicated helpers and are always re-checked server-side / by RLS.
  */
 const PERMISSIONS: Record<AppRole, Record<Resource, readonly Action[]>> = {
   admin: {
     contacts: ALL,
     documents: ALL,
     users: ALL,
+    agents: ALL,
+    agencies: ALL,
   },
   manager: {
     contacts: ["create", "read", "update"],
     documents: ALL,
     users: [],
+    agents: ["create", "read", "update"],
+    agencies: ["create", "read", "update"],
   },
-  member: {
+  agent: {
     contacts: ["read"],
     documents: ["read"],
     users: [],
+    agents: ["read"],
+    agencies: [],
+  },
+  agency_owner: {
+    contacts: ["read"],
+    documents: ["read"],
+    users: [],
+    agents: ["read"],
+    agencies: ["read"],
   },
 };
 
@@ -37,4 +51,9 @@ export function can(role: AppRole, action: Action, resource: Resource): boolean 
 
 export function isAdmin(role: AppRole): boolean {
   return role === "admin";
+}
+
+/** Findway staff roles — the internal users who run the agency's records. */
+export function isStaff(role: AppRole): boolean {
+  return role === "admin" || role === "manager";
 }

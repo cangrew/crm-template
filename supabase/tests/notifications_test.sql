@@ -30,11 +30,11 @@ insert into auth.users (id, email, raw_user_meta_data)
 values
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1', 'ntf-admin@test', '{"full_name":"Ntf Admin"}'),
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2', 'ntf-manager@test', '{"full_name":"Ntf Manager"}'),
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3', 'ntf-member@test', '{"full_name":"Ntf Member"}');
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3', 'ntf-agent@test', '{"full_name":"Ntf Agent"}');
 
 update public.profiles set role = 'admin' where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1';
 update public.profiles set role = 'manager' where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2';
-update public.profiles set role = 'member' where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3';
+update public.profiles set role = 'agent' where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3';
 
 -- ---------------------------------------------------------------------------
 -- Creating a contact (as superuser, actor null) notifies every role.
@@ -69,12 +69,12 @@ select is(
      and entity_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1'
      and user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3'),
   1::bigint,
-  'contact_created reaches the member'
+  'contact_created reaches the agent'
 );
 
 -- ---------------------------------------------------------------------------
 -- The manager flags the contact at risk: high-priority fan-out to admin
--- (+managers), excluding the acting manager; members are not in the audience.
+-- (+managers), excluding the acting manager; agents are not in the audience.
 -- ---------------------------------------------------------------------------
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2"}';
@@ -107,7 +107,7 @@ select is(
    where type = 'contact_at_risk'
      and user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3'),
   0::bigint,
-  'members are outside the contact_at_risk audience'
+  'agents are outside the contact_at_risk audience'
 );
 
 -- ---------------------------------------------------------------------------
@@ -135,7 +135,7 @@ select is(
    where type = 'contact_closed'
      and user_id in ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3')),
   0::bigint,
-  'contact_closed reaches neither manager nor member'
+  'contact_closed reaches neither manager nor agent'
 );
 
 -- ---------------------------------------------------------------------------
@@ -148,7 +148,7 @@ select is(
   (select count(*) from public.notifications
    where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1'),
   0::bigint,
-  'a member cannot read another user''s notifications'
+  'a agent cannot read another user''s notifications'
 );
 
 select is(
@@ -156,7 +156,7 @@ select is(
    where user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3'
      and entity_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1'),
   1::bigint,
-  'a member reads their own notifications'
+  'a agent reads their own notifications'
 );
 
 select is(

@@ -253,7 +253,7 @@ export type Database = {
       };
     };
     Enums: {
-      app_role: "admin" | "manager" | "member";
+      app_role: "admin" | "manager" | "agent" | "agency_owner";
       contact_status: "lead" | "active" | "at_risk" | "closed";
       notification_priority: "normal" | "high";
       notification_type: "contact_created" | "contact_at_risk" | "contact_closed";
@@ -385,7 +385,7 @@ export const Constants = {
   },
   public: {
     Enums: {
-      app_role: ["admin", "manager", "member"],
+      app_role: ["admin", "manager", "agent", "agency_owner"],
       contact_status: ["lead", "active", "at_risk", "closed"],
       notification_priority: ["normal", "high"],
       notification_type: ["contact_created", "contact_at_risk", "contact_closed"],
